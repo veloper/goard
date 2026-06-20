@@ -31,15 +31,6 @@ Built for the way AI agents work — stateless, API-first, zero setup.
 - **WebSocket** — real-time change broadcasting with self-event suppression.
 - **Single binary** — Go + SQLite (WAL, no CGO). No runtime deps. ~20 MB image.
 
-## Web UI
-
-| Route | View |
-|-------|------|
-| `/login` | Sign in with username + PAT |
-| `/` | Projects list |
-| `/projects/{id}` | Kanban board by state |
-| `/issues/{id}` | Issue detail with comments |
-
 ## Configuration
 
 | Variable | Default | Required |
