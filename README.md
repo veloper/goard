@@ -1,6 +1,12 @@
 # Ticketer
 
-A minimal, API-first project/issue tracker for AI agent teams. Built in Go, backed by SQLite, with an embedded kanban web UI and an MCP server for LLM-driven management.
+**Project/issue tracker for AI agent teams.** REST API, kanban web UI, MCP server, CLI — all in one Go binary with embedded SQLite.
+
+[![Docker Hub](https://img.shields.io/docker/pulls/veloper/ticketer?color=2563eb&label=Docker%20Pulls)](https://hub.docker.com/r/veloper/ticketer)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+---
 
 ## Quickstart
 
@@ -11,16 +17,19 @@ docker run -p 8300:8300 \
   veloper/ticketer
 ```
 
-Open http://localhost:8300/login and sign in with `admin` / `pat_admin`.
+Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
 
-## Features
+---
 
-- **REST API** — full CRUD for projects, issues, comments, users. PAT-based auth.
-- **Web UI** — kanban board, issue detail, comments. Login with your PAT.
-- **MCP Server** — 16 tools for LLMs to manage projects directly (Streamable HTTP).
+## Why Ticketer?
+
+Built for the way AI agents work — stateless, API-first, zero setup.
+
+- **MCP Server** at `/mcp` — 16 tools for LLMs to manage projects directly. Streamable HTTP transport.
+- **REST API** with PAT auth — full CRUD for projects, issues, comments, users. Slug-based references.
+- **tktrctl CLI** — script bootstrapping, automate workflows, manage from the terminal.
 - **WebSocket** — real-time change broadcasting with self-event suppression.
-- **CLI** — `tktrctl` for scripting, bootstrapping, and automation.
-- **Single binary** — Go + embedded SQLite (WAL mode, zero CGO). No runtime deps.
+- **Single binary** — Go + SQLite (WAL, no CGO). No runtime deps. ~20 MB image.
 
 ## Web UI
 
@@ -28,28 +37,28 @@ Open http://localhost:8300/login and sign in with `admin` / `pat_admin`.
 |-------|------|
 | `/login` | Sign in with username + PAT |
 | `/` | Projects list |
-| `/projects/{id}` | Kanban board grouped by state |
-| `/issues/{id}` | Issue detail with comments and state controls |
+| `/projects/{id}` | Kanban board by state |
+| `/issues/{id}` | Issue detail with comments |
 
 ## Configuration
 
-| Env var | Default | Description |
-|---------|---------|-------------|
-| `TICKETER_ADMIN_USERNAME` | — | Admin username **(required)** |
-| `TICKETER_ADMIN_PAT` | — | Admin personal access token **(required)** |
-| `TICKETER_HOST` | `""` | Listen host (all interfaces) |
-| `TICKETER_PORT` | `"8300"` | Listen port |
-| `TICKETER_DB_PATH` | `"ticketer.db"` | SQLite database path (`/data/ticketer.db` in Docker) |
+| Variable | Default | Required |
+|----------|---------|----------|
+| `TICKETER_ADMIN_USERNAME` | — | Yes |
+| `TICKETER_ADMIN_PAT` | — | Yes |
+| `TICKETER_PORT` | `8300` | |
+| `TICKETER_HOST` | `""` (all) | |
+| `TICKETER_DB_PATH` | `ticketer.db` | |
 
 ## Docs
 
-| Doc | Contents |
-|-----|----------|
-| [`docs/api.md`](docs/api.md) | REST API reference |
-| [`docs/cli.md`](docs/cli.md) | tktrctl commands |
-| [`docs/mcp.md`](docs/mcp.md) | MCP server tools and config |
-| [`docs/websocket.md`](docs/websocket.md) | WebSocket events |
-| [`docs/data-model.md`](docs/data-model.md) | States, types, priorities, slugs |
-| [`docs/docker.md`](docs/docker.md) | Docker Compose and automation |
-| [`docs/architecture.md`](docs/architecture.md) | System architecture diagram |
-| [`AGENTS.md`](AGENTS.md) | Agent guide — how to use Ticketer programmatically |
+| | |
+|---|---|
+| **API** | [`docs/api.md`](docs/api.md) — endpoints, examples, errors |
+| **CLI** | [`docs/cli.md`](docs/cli.md) — tktrctl commands and usage |
+| **MCP** | [`docs/mcp.md`](docs/mcp.md) — LLM tools and client config |
+| **WebSocket** | [`docs/websocket.md`](docs/websocket.md) — real-time events |
+| **Data Model** | [`docs/data-model.md`](docs/data-model.md) — states, types, priorities |
+| **Docker** | [`docs/docker.md`](docs/docker.md) — Compose, automation, setup |
+| **Architecture** | [`docs/architecture.md`](docs/architecture.md) — system design |
+| **Agent Guide** | [`AGENTS.md`](AGENTS.md) — for AI agents using Ticketer |
