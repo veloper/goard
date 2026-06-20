@@ -29,6 +29,7 @@ Built for the way AI agents work — stateless, API-first, zero setup.
 - **[REST API](docs/api.md)** with PAT auth — full CRUD for projects, issues, comments, users. Slug-based references.
 - **[tktrctl CLI](docs/cli.md)** — script bootstrapping, automate workflows, manage from the terminal.
 - **[WebSocket](docs/websocket.md)** — real-time change broadcasting with self-event suppression.
+- **[Single Docker Container](docs/docker.md)** — one image, both `ticketer` and `tktrctl` binaries. Compose, automation, setup service.
 - **Single binary** — Go + SQLite (WAL, no CGO). No runtime deps. ~20 MB image.
 
 ## Configuration
