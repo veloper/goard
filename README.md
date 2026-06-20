@@ -33,7 +33,7 @@ Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
 
 ## Why Ticketer?
 
-Built for the way AI agents work — stateless, API-first, zero setup.
+Built for the way AI agents work — API-first, zero setup.
 
 - **[MCP Server](docs/mcp.md)** at `/mcp` — 16 tools for LLMs to manage projects directly. Streamable HTTP transport.
 - **[REST API](docs/api.md)** with PAT auth — full CRUD for projects, issues, comments, users. Slug-based references.
