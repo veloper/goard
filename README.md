@@ -18,11 +18,6 @@ services:
     environment:
       TICKETER_ADMIN_USERNAME: admin
       TICKETER_ADMIN_PAT: pat_admin
-    volumes:
-      - ticketer-data:/data
-
-volumes:
-  ticketer-data:
 ```
 
 Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
