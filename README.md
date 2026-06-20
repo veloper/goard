@@ -3,7 +3,7 @@
 **Project/issue tracker for AI agent teams.** REST API, kanban web UI, MCP server, CLI — all in one Go binary with embedded SQLite.
 
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 
 ---
 
