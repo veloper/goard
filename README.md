@@ -7,7 +7,7 @@
 
 ---
 
-## Why Ticketer?
+## Features
 
 Built for the way AI agents work — API-first, zero setup.
 
