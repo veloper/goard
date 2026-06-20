@@ -2,7 +2,6 @@
 
 **Project/issue tracker for AI agent teams.** REST API, kanban web UI, MCP server, CLI — all in one Go binary with embedded SQLite.
 
-[![Docker Hub](https://img.shields.io/docker/pulls/veloper/ticketer?color=2563eb&label=Docker%20Pulls)](https://hub.docker.com/r/veloper/ticketer)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
