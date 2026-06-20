@@ -7,6 +7,18 @@
 
 ---
 
+## Why Ticketer?
+
+Built for the way AI agents work — API-first, zero setup.
+
+- **[MCP Server](docs/mcp.md)** → let any LLM manage your projects. 16 tools, zero config.
+- **[REST API](docs/api.md)** → clean, predictable CRUD. Token auth, slug references.
+- **[tktrctl CLI](docs/cli.md)** → script your workflow, automate bootstrapping.
+- **[WebSocket](docs/websocket.md)** → real-time updates without polling.
+- **[Single Docker Container](docs/docker.md)** → everything in one image. Compose, automate, done.
+- **[Single Go Binary](docs/architecture.md)** → compiled, static, dependency-free. Just the binary and a SQLite file.
+
+
 ## Quickstart
 
 Run with Docker Compose:
@@ -30,17 +42,6 @@ volumes:
 Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
 
 ---
-
-## Why Ticketer?
-
-Built for the way AI agents work — API-first, zero setup.
-
-- **[MCP Server](docs/mcp.md)** → let any LLM manage your projects. 16 tools, zero config.
-- **[REST API](docs/api.md)** → clean, predictable CRUD. Token auth, slug references.
-- **[tktrctl CLI](docs/cli.md)** → script your workflow, automate bootstrapping.
-- **[WebSocket](docs/websocket.md)** → real-time updates without polling.
-- **[Single Docker Container](docs/docker.md)** → everything in one image. Compose, automate, done.
-- **[Single Go Binary](docs/architecture.md)** → compiled, static, dependency-free. Just the binary and a SQLite file.
 
 ## Configuration
 
