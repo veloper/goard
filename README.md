@@ -35,12 +35,12 @@ Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
 
 Built for the way AI agents work — API-first, zero setup.
 
-- **[MCP Server](docs/mcp.md)** at `/mcp` — 16 tools for LLMs to manage projects directly. Streamable HTTP transport.
-- **[REST API](docs/api.md)** with PAT auth — full CRUD for projects, issues, comments, users. Slug-based references.
-- **[tktrctl CLI](docs/cli.md)** — script bootstrapping, automate workflows, manage from the terminal.
-- **[WebSocket](docs/websocket.md)** — real-time change broadcasting with self-event suppression.
-- **[Single Docker Container](docs/docker.md)** — one image with server and CLI. Compose, automation, setup service.
-- **[Single Go binary](docs/architecture.md)** — Go + SQLite (WAL, no CGO). No runtime deps. ~20 MB image.
+- **[MCP Server](docs/mcp.md)** — let any LLM manage your projects. 16 tools, zero configuration.
+- **[REST API](docs/api.md)** — clean, predictable CRUD. Authenticate with a token, reference issues by slug.
+- **[tktrctl CLI](docs/cli.md)** — script your workflow, automate bootstrapping, manage from anywhere.
+- **[WebSocket](docs/websocket.md)** — real-time updates without polling. Changes broadcast the moment they happen.
+- **[Single Docker Container](docs/docker.md)** — everything in one image. Compose, automate, scale down.
+- **[Single Go binary](docs/architecture.md)** — no runtime, no dependencies, no fuss. ~20 MB.
 
 ## Configuration
 
