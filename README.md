@@ -39,7 +39,7 @@ Built for the way AI agents work — API-first, zero setup.
 - **[REST API](docs/api.md)** — clean, predictable CRUD. Authenticate with a token, reference issues by slug.
 - **[tktrctl CLI](docs/cli.md)** — script your workflow, automate bootstrapping, manage from anywhere.
 - **[WebSocket](docs/websocket.md)** — real-time updates without polling. Changes broadcast the moment they happen.
-- **[Single Docker Container](docs/docker.md)** — everything in one image. Compose, automate, scale down.
+- **[Single Docker Container](docs/docker.md)** — everything in one image. Compose, automate, done.
 - **[Single Go binary](docs/architecture.md)** — compiled, static, dependency-free. Just the binary and a SQLite file.
 
 ## Configuration
