@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Roomy Ticketer — Login</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.card { background: #fff; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,.1); width: 360px; }
+h1 { font-size: 20px; margin-bottom: 4px; }
+p { color: #666; font-size: 14px; margin-bottom: 20px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #444; }
+.form-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+.form-row input:focus { outline: none; border-color: #2563eb; }
+.btn { width: 100%; background: #2563eb; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+.btn:hover { background: #1d4ed8; }
+.error { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
+.error.show { display: block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Sign in</h1>
+  <p>Enter your admin credentials to continue.</p>
+  <div class="form-row">
+    <label for="username">Username</label>
+    <input id="username" type="text" autocomplete="username" placeholder="admin" autofocus>
+  </div>
+  <div class="form-row">
+    <label for="pat">Personal Access Token</label>
+    <input id="pat" type="password" autocomplete="current-password" placeholder="pat_...">
+  </div>
+  <button class="btn" onclick="login()">Sign in</button>
+  <div class="error" id="error">Invalid credentials</div>
+</div>
+<script>
+async function login() {
+  const username = document.getElementById('username').value;
+  const pat = document.getElementById('pat').value;
+  const errEl = document.getElementById('error');
+  if (!username || !pat) {
+    errEl.textContent = 'Username and PAT are required';
+    errEl.classList.add('show');
+    return;
+  }
+  try {
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': 'Bearer ' + pat }
+    });
+    if (!res.ok) {
+      errEl.textContent = 'Invalid username or PAT';
+      errEl.classList.add('show');
+      return;
+    }
+    const user = await res.json();
+    localStorage.setItem('pat', pat);
+    localStorage.setItem('user', JSON.stringify(user));
+    window.location.href = '/';
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+    errEl.classList.add('show');
+  }
+}
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
-goard
 *.db
 *.db-*
 .DS_Store
-goardctl
+/goard
+/goardctl

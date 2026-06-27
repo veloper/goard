@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Roomy Ticketer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; padding: 24px; }
+h1 { margin-bottom: 4px; }
+a { color: #2563eb; text-decoration: none; }
+.back { margin-bottom: 16px; display: block; }
+.card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.meta { display: flex; gap: 16px; margin: 12px 0; font-size: 14px; color: #666; flex-wrap: wrap; }
+.meta span { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; }
+.desc { margin: 16px 0; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+.controls { display: flex; gap: 8px; margin: 16px 0; }
+.controls select, .controls button { padding: 6px 12px; font-size: 13px; border-radius: 4px; border: 1px solid #ddd; }
+.btn { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.btn:hover { background: #1d4ed8; }
+.btn-sm { background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.comment { border-left: 3px solid #ddd; padding: 10px 0 10px 12px; margin: 8px 0; }
+.comment .author { font-weight: 600; font-size: 13px; }
+.comment .time { font-size: 11px; color: #999; margin-left: 8px; }
+.comment .body { margin-top: 4px; font-size: 14px; white-space: pre-wrap; }
+.add-comment { margin-top: 16px; }
+.add-comment textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 60px; }
+</style>
+</head>
+<body>
+<a href="javascript:history.back()" class="back">← Back</a>
+<div class="card" id="issue"></div>
+<script>
+const PAT = localStorage.getItem('pat') || '';
+if (!PAT) { window.location.href = '/login'; }
+const issueId = location.pathname.split('/')[2];
+const STATES = ['backlog', 'todo', 'in_progress', 'qa', 'done', 'cancelled'];
+const PRIORITIES = ['none', 'urgent', 'high', 'medium', 'low'];
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Authorization': `Bearer ${opts.pat || PAT}`, 'Content-Type': 'application/json', ...opts.headers },
+    method: opts.method || 'GET',
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (res.status === 204) return null;
+  const env = await res.json();
+  if (env.meta && env.meta.error) throw new Error(env.meta.error);
+  return env.data;
+}
+
+async function load() {
+  const [issue, comments, users] = await Promise.all([
+    api(`/api/issues/${issueId}`),
+    api(`/api/issues/${issueId}/comments`),
+    api('/api/users'),
+  ]);
+
+  const userMap = {};
+  users.forEach(u => userMap[u.id] = u);
+
+  const authorName = issue.assignee ? (userMap[issue.assignee]?.display_name || '') : '';
+  const creatorName = userMap[issue.created_by]?.display_name || '';
+
+  document.getElementById('issue').innerHTML = `
+    <div style="font-size:13px;color:#999">${issue.sequence_id}</div>
+    <h1>${issue.title}</h1>
+    <div class="meta">
+      <span>State: ${issue.state.replace('_',' ')}</span>
+      <span>Priority: ${PRIORITIES[issue.priority]}</span>
+      ${issue.assignee ? `<span>Assignee: ${authorName}</span>` : ''}
+      <span>Created by: ${creatorName}</span>
+    </div>
+    ${issue.description ? `<div class="desc">${issue.description}</div>` : ''}
+
+    <div class="controls">
+      <select id="state-sel">${STATES.map(s => `<option value="${s}" ${s === issue.state ? 'selected' : ''}>${s.replace('_',' ')}</option>`).join('')}</select>
+      <select id="assignee-sel"><option value="">Unassigned</option>${users.map(u => `<option value="${u.id}" ${u.id === issue.assignee ? 'selected' : ''}>${u.display_name}</option>`).join('')}</select>
+      <button class="btn-sm" onclick="update()">Update</button>
+    </div>
+
+    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+
+    <h3>Comments (${comments.length})</h3>
+    ${comments.map(c => `
+      <div class="comment">
+        <div><span class="author">${userMap[c.author]?.display_name || ''}</span><span class="time">${c.created_at}</span></div>
+        <div class="body">${c.body}</div>
+      </div>
+    `).join('')}
+
+    <div class="add-comment">
+      <textarea id="comment-body" placeholder="Add a comment..." rows="2"></textarea>
+      <br><br>
+      <button class="btn-sm" onclick="addComment()">Comment</button>
+    </div>
+  `;
+}
+
+async function update() {
+  const state = document.getElementById('state-sel').value;
+  const assignee = document.getElementById('assignee-sel').value;
+  await api(`/api/issues/${issueId}`, { method: 'PATCH', body: { state, assignee } });
+  wsConnect();
+load();
+}
+
+async function addComment() {
+  const body = document.getElementById('comment-body').value;
+  if (!body) return;
+  await api(`/api/issues/${issueId}/comments`, { method: 'POST', body: { body } });
+  document.getElementById('comment-body').value = '';
+  load();
+}
+
+load();
+
+function wsConnect() {
+  const pat = document.querySelector('meta[name="default-pat"]')?.content || '';
+  if (!pat) return;
+  const ws = new WebSocket('ws://' + location.host + '/api/ws?pat=' + pat);
+  ws.onopen = () => {};
+  ws.onclose = () => { setTimeout(wsConnect, 3000); };
+  ws.onerror = () => { ws.close(); };
+  ws.onmessage = (msg) => {
+    try {
+      const ev = JSON.parse(msg.data);
+      if (ev.type.startsWith('project_') || ev.type.startsWith('issue_') || ev.type.startsWith('comment_')) {
+        load();
+      }
+    } catch(e) {}
+  };
+}
+
+</script>
+</body>
+</html>
