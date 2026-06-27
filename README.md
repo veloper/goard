@@ -5,7 +5,7 @@
 
 # Goard
 
-Kanban for engineering teams that include AI agents. Built-in MCP server, REST API, and web UI — one binary, embedded SQLite.
+Project tracker with built-in MCP server, REST API, and web UI — one binary, embedded SQLite.
 
 [Website](https://github.com/veloper/goard) •
 [Docs](docs/) •
@@ -51,7 +51,7 @@ docker compose exec goard goardctl issues create MY-PROJECT "Fix login" --type b
 
 ## Features
 
-- **Kanban board** — six columns (backlog → done), priority-colored cards, assignee support
+- **Project view** — issues grouped by state (backlog → done) with priority colors and assignee info
 - **MCP server** — every operation accessible to LLMs out of the box
 - **REST API** — full CRUD for projects, issues, comments, users
 - **WebSocket** — real-time updates across all clients
