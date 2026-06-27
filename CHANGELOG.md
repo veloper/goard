@@ -48,6 +48,8 @@
 - **Binary builds.** Archives + checksums attached to GitHub Releases.
 - **`scripts/release.sh`.** Semver-aware release helper with version guard.
 
+## v0.3.0 (unreleased)
+
 ### 🏠 Project
 
 - Added `CONTRIBUTING.md`.
