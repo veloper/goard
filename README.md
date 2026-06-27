@@ -7,23 +7,30 @@
 
 ![Goard](docs/banner.png)
 
+Project tracker for teams that include AI agents.  
+MCP server + REST API + read-only web UI + CLI. One binary, embedded SQLite.
+
+```bash
+docker run -p 8300:8300 -e GOARD_ADMIN_USERNAME=admin -e GOARD_ADMIN_PAT=pat_admin veloper/goard
+```
+
 ---
 
-## Features
+## What makes it different
 
-Built for the way AI agents work — API-first, zero setup.
+**MCP server, not just a REST API.**  
+Every tool, every operation, available to any LLM out of the box. No custom function calling, no glue code.
 
-- **[MCP Server](docs/mcp.md)** → let any LLM manage your projects. 16 tools, zero config.
-- **[REST API](docs/api.md)** → clean, predictable CRUD. Token auth, slug references.
-- **[goardctl CLI](docs/cli.md)** → script your workflow, automate bootstrapping.
-- **[WebSocket](docs/websocket.md)** → real-time updates without polling.
-- **[Single Docker Container](docs/docker.md)** → everything in one image. Compose, automate, done.
-- **[Single Go Binary](docs/architecture.md)** → compiled, static, dependency-free. Just the binary and a SQLite file.
+**Your infrastructure is one binary.**  
+No Postgres. No Redis. No container orchestration. One `docker run` and you're done. The database is a file.
 
+**Self-hosted by design.**  
+Your issue data doesn't train anyone else's model. It stays on your infrastructure, in a SQLite file.
+
+**Built for automation first.**  
+The web UI is read-only. Everything — create, update, filter, sort, paginate — is designed for programmatic access.
 
 ## Quickstart
-
-Run with Docker Compose:
 
 ```yaml
 services:
@@ -41,29 +48,21 @@ volumes:
   goard-data:
 ```
 
-Open **http://localhost:8300/login** and sign in with `admin` / `pat_admin`.
+```bash
+docker compose up -d
+# Open http://localhost:8300  — sign in with admin / pat_admin
 
----
-
-## Configuration
-
-| Variable | Default | Required |
-|----------|---------|----------|
-| `GOARD_ADMIN_USERNAME` | — | Yes |
-| `GOARD_ADMIN_PAT` | — | Yes |
-| `GOARD_PORT` | `8300` | |
-| `GOARD_HOST` | `""` (all) | |
-| `GOARD_DB_PATH` | `goard.db` | |
+# Or install the CLI
+go install github.com/veloper/goard/cmd/goardctl@latest
+```
 
 ## Docs
 
 | | |
 |---|---|
-| **API** | [`docs/api.md`](docs/api.md) — endpoints, examples, errors |
-| **CLI** | [`docs/cli.md`](docs/cli.md) — goardctl commands and usage |
-| **MCP** | [`docs/mcp.md`](docs/mcp.md) — LLM tools and client config |
-| **WebSocket** | [`docs/websocket.md`](docs/websocket.md) — real-time events |
-| **Data Model** | [`docs/data-model.md`](docs/data-model.md) — states, types, priorities |
-| **Docker** | [`docs/docker.md`](docs/docker.md) — Compose, automation, setup |
-| **Architecture** | [`docs/architecture.md`](docs/architecture.md) — system design |
-| **Agent Guide** | [`AGENTS.md`](AGENTS.md) — for AI agents using Goard |
+| **API** | [`docs/api.md`](docs/api.md) |
+| **CLI** | [`docs/cli.md`](docs/cli.md) |
+| **MCP** | [`docs/mcp.md`](docs/mcp.md) |
+| **WebSocket** | [`docs/websocket.md`](docs/websocket.md) |
+| **Docker** | [`docs/docker.md`](docs/docker.md) |
+| **Agent Guide** | [`AGENTS.md`](AGENTS.md) |
