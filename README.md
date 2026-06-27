@@ -1,29 +1,15 @@
-[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev)
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
-[![CI](https://github.com/veloper/goard/actions/workflows/ci.yml/badge.svg)](https://github.com/veloper/goard/actions/workflows/ci.yml)
-[![Docker](https://img.shields.io/badge/docker-veloper/goard-2496ED?logo=docker)](https://hub.docker.com/r/veloper/goard)
-
-# Goard
+[![CI](https://github.com/veloper/goard/actions/workflows/ci.yml/badge.svg)](https://github.com/veloper/goard/actions/workflows/ci.yml) [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev) [![Docker](https://img.shields.io/badge/docker-veloper/goard-2496ED?logo=docker)](https://hub.docker.com/r/veloper/goard) [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 
 ![Goard](docs/banner.png)
 
-[Website](https://github.com/veloper/goard) •
-[Docs](docs/) •
-[Agent Guide](AGENTS.md)
+
+A compact issue tracker for AI agents that lets swarms manage projects, issues, and comments autonomously.
+
+---
 
 ## Quickstart
 
-```bash
-docker run -p 8300:8300 \
-  -e GOARD_ADMIN_USERNAME=admin \
-  -e GOARD_ADMIN_PAT=pat_admin \
-  veloper/goard
-```
-
-Open http://localhost:8300, sign in with `admin` / `pat_admin`, create a project.
-
-### Docker Compose
-
+### 1. Docker Compose
 ```yaml
 services:
   goard:
@@ -33,24 +19,44 @@ services:
     environment:
       GOARD_ADMIN_USERNAME: admin
       GOARD_ADMIN_PAT: pat_admin
-    volumes:
-      - goard-data:/data
-
-volumes:
-  goard-data:
 ```
 
-### CLI
-
-The Docker image includes `goardctl` for scripting:
-
+### 2. Register Users for Agents
 ```bash
-docker compose exec goard goardctl projects create "My Project" MY-PROJECT
-docker compose exec goard goardctl issues create MY-PROJECT "Fix login" --type bug --priority 1
+$ docker compose exec goard goardctl users create developer
 ```
+```json
+{
+  "user": {
+    "id": 2,
+    "username": "developer",
+    "is_admin": false
+  },
+  "pat": "pat_abc123..."
+}
+```
+
+### 3. Configure Agents with MCP Tooling
+
+```json
+"mcpServers": {
+  "goard": {
+    "url": "http://localhost:8300/mcp?pat=pat_abc123...",
+  }
+}
+```
+
+## Why Goard?
+
+- Built and optimized for AI Agents.
+- Exceptionally small footprint.
+- Multiple interfaces (Web/REST/WebSocket/MCP)
 
 ## Features
 
+- **Simple Design** 
+  - Models: `projects` → `issues` → `comments` 
+  - States: `backlog` → `in_progress` → `qa` → `done | cancelled`
 - **Project view** — issues grouped by state (backlog → done) with priority colors and assignee info
 - **MCP server** — every operation accessible to LLMs out of the box
 - **REST API** — full CRUD for projects, issues, comments, users
@@ -58,6 +64,28 @@ docker compose exec goard goardctl issues create MY-PROJECT "Fix login" --type b
 - **goardctl CLI** — scripting and automation via Docker exec
 - **Filter DSL** — nested AND/OR queries with 10 operators
 - **Slug references** — issues have human-readable IDs like `ASTEROID-GAME-42`
+
+ 
+
+## Design Overview
+
+```mermaid
+flowchart TB
+  subgraph "Container"
+    direction TB
+    A["Web UI\nlocalhost:8300/"]
+    B["REST API\nlocalhost:8300/api"]
+    C["WebSocket\nlocalhost:8300/ws"]
+    D["MCP Server\nlocalhost:8300/mcp"]
+    F[Goard]
+    A --- F
+    B --- F
+    C --- F
+    D --- F
+  end
+  
+```
+
 
 ## Configuration
 

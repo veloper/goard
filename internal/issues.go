@@ -14,7 +14,7 @@ func (s *Store) CreateIssue(projectID int64, title, description, typ, state stri
 		return nil, fmt.Errorf("get project: %w", err)
 	}
 	if state == "" {
-		state = "todo"
+		state = "backlog"
 	}
 	if typ == "" {
 		typ = "feature"

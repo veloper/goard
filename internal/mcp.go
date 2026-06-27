@@ -91,9 +91,9 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 	s.AddTool(mcp.NewTool("list_issues",
 		mcp.WithDescription("List all issues in a project, optionally filtered by state, assignee, or custom filter"),
 		mcp.WithString("project_id", mcp.Description("Project ID or slug"), mcp.Required()),
-		mcp.WithString("state", mcp.Description("Filter by state: backlog, todo, in_progress, qa, done, cancelled")),
+		mcp.WithString("state", mcp.Description("Filter by state: backlog, in_progress, review, done, cancelled")),
 		mcp.WithNumber("assignee", mcp.Description("Filter by assignee user ID")),
-		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: type, state, priority, assignee_user_id, created_by_user_id | operators: eq, neq, gt, gte, lt, lte, in, not_in, like, is | type: epic/feature/bug/chore | state: backlog/todo/in_progress/qa/done/cancelled | priority: 0-4 | assignee/created_by: numeric user ID`)),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: type, state, priority, assignee_user_id, created_by_user_id | operators: eq, neq, gt, gte, lt, lte, in, not_in, like, is | type: epic/feature/bug/chore | state: backlog/in_progress/review/done/cancelled | priority: 0-4 | assignee/created_by: numeric user ID`)),
 		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
 		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
 		mcp.WithString("sort", mcp.Description("Sort column: title, slug, type, state, priority, created_at, updated_at")),
@@ -128,9 +128,9 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 		), handleUpdateIssue(store))
 
 		s.AddTool(mcp.NewTool("update_issue_state",
-			mcp.WithDescription("Move an issue to a new state in the pipeline — valid states: backlog, todo, in_progress, qa, done, cancelled"),
+			mcp.WithDescription("Move an issue to a new state in the pipeline — valid states: backlog, in_progress, review, done, cancelled"),
 			mcp.WithString("id", mcp.Description("Issue ID or slug"), mcp.Required()),
-			mcp.WithString("state", mcp.Description("Target state: backlog, todo, in_progress, qa, done, or cancelled"), mcp.Required()),
+			mcp.WithString("state", mcp.Description("Target state: backlog, in_progress, review, done, cancelled"), mcp.Required()),
 		), handleUpdateIssueState(store))
 
 		s.AddTool(mcp.NewTool("delete_issue",

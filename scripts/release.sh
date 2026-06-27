@@ -28,8 +28,8 @@ fi
 # Make sure we have the latest tags
 git fetch --tags origin 2>/dev/null || true
 
-# Find the highest existing tag
-LATEST=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+# Find the highest existing semver tag (vX.Y.Z only)
+LATEST=$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
 
 if [ -n "$LATEST" ]; then
   # Compare using sort -V (version sort)

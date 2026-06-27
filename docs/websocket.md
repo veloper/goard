@@ -54,7 +54,7 @@ Update events only include the fields that changed, not the full entity:
   "payload": {
     "id": 1,
     "changed": {
-      "state": {"before": "todo", "after": "qa"},
+      "state": {"before": "backlog", "after": "review"},
       "assignee": {"before": null, "after": 2}
     }
   }

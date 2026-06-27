@@ -16,13 +16,12 @@ All IDs are SQLite auto-increment integers.
 Issues move through a fixed state machine. No custom states:
 
 ```
-backlog → todo → in_progress → qa → done → cancelled
+backlog → in_progress → review → done → cancelled
 ```
 
 - **backlog** — idea, not yet scheduled
-- **todo** — ready to work on
 - **in_progress** — actively being worked
-- **qa** — ready for testing/review
+- **review** — ready for testing/review
 - **done** — completed
 - **cancelled** — won't do (terminal state)
 
@@ -67,7 +66,7 @@ The project slug is set at project creation. The issue number is its auto-increm
   "title": "Add ship rotation",
   "description": "Left/right arrows rotate the ship",
   "type": "feature",
-  "state": "todo",
+  "state": "backlog",
   "assignee": 0,
   "priority": 2,
   "parent_id": 0,

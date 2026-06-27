@@ -126,7 +126,7 @@ func (s *Store) migrate() error {
 	CREATE TABLE IF NOT EXISTS issues (
 		id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 		slug TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL,
-		type TEXT NOT NULL DEFAULT 'feature', state TEXT NOT NULL DEFAULT 'todo',
+		type TEXT NOT NULL DEFAULT 'feature', state TEXT NOT NULL DEFAULT 'backlog',
 		assignee_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
 		priority INTEGER NOT NULL DEFAULT 3, parent_id INTEGER REFERENCES issues(id) ON DELETE CASCADE,
 		created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

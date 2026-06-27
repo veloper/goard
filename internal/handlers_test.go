@@ -208,7 +208,7 @@ func TestCreateIssueHandler(t *testing.T) {
 		"title":       "Add feature",
 		"description": "Do the thing",
 		"type":        "feature",
-		"state":       "todo",
+		"state":       "backlog",
 		"assignee":    alice.ID,
 		"priority":    2,
 	}, alice)
@@ -223,7 +223,7 @@ func TestCreateIssueHandler(t *testing.T) {
 	if iss.Type != "feature" {
 		t.Errorf("expected type feature, got %s", iss.Type)
 	}
-	if iss.State != "todo" {
+	if iss.State != "backlog" {
 		t.Errorf("expected state todo, got %s", iss.State)
 	}
 	if iss.Priority != 2 {
@@ -312,7 +312,7 @@ func TestListIssuesHandler_filterByState(t *testing.T) {
 	alice := getUserByPAT(t, s, "pat_alice")
 	p := mustCreateProject(t, s, "Filter", alice.ID)
 	s.CreateIssue(p.ID, "One", "", "", "todo", 0, 0, alice.ID, 0)
-	s.CreateIssue(p.ID, "Two", "", "", "qa", 0, 0, alice.ID, 0)
+	s.CreateIssue(p.ID, "Two", "", "", "review", 0, 0, alice.ID, 0)
 
 	req := handlerRequest(t, "GET", fmt.Sprintf("/api/projects/%d", p.ID)+"/issues?state=todo", nil, alice)
 	rr := serveHandler(h, req)
@@ -403,7 +403,7 @@ func TestUpdateIssueHandler_bySlug(t *testing.T) {
 	// PATCH using slug instead of UUID
 	req := handlerRequest(t, "PATCH", "/api/issues/"+iss.Slug, map[string]any{
 		"title": "Updated via slug",
-		"state": "qa",
+		"state": "review",
 	}, alice)
 	rr := serveHandler(h, req)
 
@@ -413,7 +413,7 @@ func TestUpdateIssueHandler_bySlug(t *testing.T) {
 	if got.Title != "Updated via slug" {
 		t.Errorf("expected title %q, got %q", "Updated via slug", got.Title)
 	}
-	if got.State != "qa" {
+	if got.State != "review" {
 		t.Errorf("expected state review, got %s", got.State)
 	}
 }
@@ -453,7 +453,7 @@ func TestUpdateIssueHandler(t *testing.T) {
 
 	req := handlerRequest(t, "PATCH", fmt.Sprintf("/api/issues/%d", iss.ID), map[string]any{
 		"title":    "New title",
-		"state":    "qa",
+		"state":    "review",
 		"assignee": bob.ID,
 		"priority": 1,
 	}, alice)
@@ -465,7 +465,7 @@ func TestUpdateIssueHandler(t *testing.T) {
 	if got.Title != "New title" {
 		t.Errorf("expected title %q, got %q", "New title", got.Title)
 	}
-	if got.State != "qa" {
+	if got.State != "review" {
 		t.Errorf("expected state review, got %s", got.State)
 	}
 	if got.Assignee.ID != bob.ID {
@@ -523,8 +523,8 @@ func TestInfo(t *testing.T) {
 		} `json:"projects"`
 	}
 	mustDecode(t, rr.Body, &info)
-	if len(info.States) != 6 {
-		t.Errorf("expected 6 states, got %d", len(info.States))
+	if len(info.States) != 5 {
+		t.Errorf("expected 5 states, got %d", len(info.States))
 	}
 	if len(info.Types) != 4 {
 		t.Errorf("expected 4 types, got %d", len(info.Types))
@@ -551,21 +551,21 @@ func TestUpdateIssueStateHandler(t *testing.T) {
 
 	// PUT state to qa
 	req := handlerRequest(t, "PUT", fmt.Sprintf("/api/issues/%d/state", iss.ID), map[string]string{
-		"state": "qa",
+		"state": "review",
 	}, alice)
 	rr := serveHandler(h, req)
 	assertStatus(t, rr.Code, 200)
 
 	var got Issue
 	mustDecode(t, rr.Body, &got)
-	if got.State != "qa" {
-		t.Errorf("expected state qa, got %s", got.State)
+	if got.State != "review" {
+		t.Errorf("expected state review, got %s", got.State)
 	}
 
 	// Verify via store
 	stored, _ := s.GetIssue(iss.ID)
-	if stored.State != "qa" {
-		t.Errorf("persisted state = %s, want qa", stored.State)
+	if stored.State != "review" {
+		t.Errorf("persisted state = %s, want review", stored.State)
 	}
 }
 

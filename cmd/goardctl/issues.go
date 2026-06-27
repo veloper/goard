@@ -230,7 +230,7 @@ func init() {
 
 	issuesCreateCmd.Flags().StringP("description", "d", "", "Issue description")
 	issuesCreateCmd.Flags().StringP("type", "", "feature", "Issue type (epic, feature, bug, chore)")
-	issuesCreateCmd.Flags().StringP("state", "", "todo", "Initial state")
+	issuesCreateCmd.Flags().StringP("state", "", "backlog", "Initial state")
 	issuesCreateCmd.Flags().Int64P("assignee", "a", 0, "Assignee user ID")
 	issuesCreateCmd.Flags().IntP("priority", "p", 3, "Priority (0=none, 1=urgent, 2=high, 3=medium, 4=low)")
 

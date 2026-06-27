@@ -346,8 +346,8 @@ func TestCreateIssue_defaults(t *testing.T) {
 	if iss.Type != "feature" {
 		t.Errorf("expected default type feature, got %s", iss.Type)
 	}
-	if iss.State != "todo" {
-		t.Errorf("expected default state todo, got %s", iss.State)
+	if iss.State != "backlog" {
+		t.Errorf("expected default state backlog, got %s", iss.State)
 	}
 	if iss.Priority != 0 {
 		t.Errorf("expected default priority 0, got %d", iss.Priority)
@@ -406,7 +406,7 @@ func TestListIssues_filterByState(t *testing.T) {
 	p, _ := s.CreateProject("Filter", "", "", alice.ID)
 
 	s.CreateIssue(p.ID, "One", "", "", "todo", 0, 0, alice.ID, 0)
-	s.CreateIssue(p.ID, "Two", "", "", "qa", 0, 0, alice.ID, 0)
+	s.CreateIssue(p.ID, "Two", "", "", "review", 0, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Three", "", "", "todo", 0, 0, alice.ID, 0)
 
 	issues, _, _ := s.ListIssues(p.ID, IssueFilter{State: "todo"})
@@ -414,7 +414,7 @@ func TestListIssues_filterByState(t *testing.T) {
 		t.Errorf("expected 2 todo issues, got %d", len(issues))
 	}
 
-	issues, _, _ = s.ListIssues(p.ID, IssueFilter{State: "qa"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{State: "review"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 review issue, got %d", len(issues))
 	}
@@ -549,7 +549,7 @@ func TestGetIssue(t *testing.T) {
 	s := newTestStore(t)
 	alice := getUserByPAT(t, s, "pat_alice")
 	p, _ := s.CreateProject("Get", "", "", alice.ID)
-	created, _ := s.CreateIssue(p.ID, "My Issue", "desc", "bug", "qa", alice.ID, 0, alice.ID, 1)
+	created, _ := s.CreateIssue(p.ID, "My Issue", "desc", "bug", "review", alice.ID, 0, alice.ID, 1)
 
 	got, err := s.GetIssue(created.ID)
 	if err != nil {
@@ -561,7 +561,7 @@ func TestGetIssue(t *testing.T) {
 	if got.Type != "bug" {
 		t.Errorf("expected type bug, got %s", got.Type)
 	}
-	if got.State != "qa" {
+	if got.State != "review" {
 		t.Errorf("expected state review, got %s", got.State)
 	}
 	if got.Priority != 1 {
@@ -637,7 +637,7 @@ func TestUpdateIssue_partial(t *testing.T) {
 	iss, _ := s.CreateIssue(p.ID, "Orig", "orig desc", "bug", "backlog", alice.ID, 0, alice.ID, 4)
 
 	// Only change title and state
-	updated, err := s.UpdateIssue(iss.ID, "New title", "", "", "qa", nil, nil, nil)
+	updated, err := s.UpdateIssue(iss.ID, "New title", "", "", "review", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("UpdateIssue: %v", err)
 	}
@@ -647,7 +647,7 @@ func TestUpdateIssue_partial(t *testing.T) {
 	if updated.Description != "orig desc" {
 		t.Errorf("description should remain 'orig desc', got %q", updated.Description)
 	}
-	if updated.State != "qa" {
+	if updated.State != "review" {
 		t.Errorf("state = %s, want review", updated.State)
 	}
 	if updated.Type != "bug" {

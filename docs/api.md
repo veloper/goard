@@ -28,7 +28,7 @@ Returns server metadata. Call this first to discover valid values.
 
 ```json
 {"meta": {"status": 200}, "data": {
-  "states": ["backlog", "todo", "in_progress", "qa", "done", "cancelled"],
+  "states": ["backlog", "in_progress", "review", "done", "cancelled"],
   "types": ["epic", "feature", "bug", "chore"],
   "priority_levels": [0, 1, 2, 3, 4],
   "priority_labels": {"0": "none", "1": "urgent", "2": "high", "3": "medium", "4": "low"},
@@ -178,14 +178,14 @@ POST /api/projects/{project_id}/issues
 {"title": "Add rotation", "type": "feature", "priority": 2}
 ```
 
-`project_id` can be a numeric ID or a slug. Only `title` is required. Defaults: `state=todo`, `type=feature`, `priority=3`.
+`project_id` can be a numeric ID or a slug. Only `title` is required. Defaults: `state=backlog`, `type=feature`, `priority=3`.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `title` | string | **Required.** Issue title |
 | `description` | string | Issue description |
 | `type` | string | `epic`, `feature`, `bug`, or `chore` |
-| `state` | string | `backlog`, `todo`, `in_progress`, `qa`, `done`, `cancelled` |
+| `state` | string | `backlog`, `in_progress`, `review`, `done`, `cancelled` |
 | `assignee` | int | User ID to assign (0 = unassigned) |
 | `priority` | int | `0`=none, `1`=urgent, `2`=high, `3`=medium, `4`=low |
 
@@ -197,7 +197,7 @@ GET /api/projects/{project_id}/issues
 
 | Param | Example | Description |
 |-------|---------|-------------|
-| `state` | `?state=qa` | Filter by state |
+| `state` | `?state=review` | Filter by state |
 | `assignee` | `?assignee=1` | Filter by assignee user ID |
 | `assigned_to_me` | `?assigned_to_me=true` | Shorthand for current user |
 | `q` | `?q=login` | Search title and description |
@@ -219,7 +219,7 @@ GET /api/issues/{id}
 
 ```
 PATCH /api/issues/{id}
-{"state": "qa", "assignee": 2}
+{"state": "review", "assignee": 2}
 ```
 
 Only provided fields change.
@@ -228,7 +228,7 @@ Only provided fields change.
 
 ```
 PUT /api/issues/{id}/state
-{"state": "qa"}
+{"state": "review"}
 ```
 
 Validates the state against the pipeline before updating.
@@ -302,7 +302,7 @@ All list endpoints accept a `filter` parameter in [react-querybuilder](https://r
 
 ```json
 ?filter={"combinator":"and","rules":[
-  {"field":"state","operator":"in","value":["todo","in_progress"]},
+  {"field":"state","operator":"in","value":["backlog","in_progress"]},
   {"field":"priority","operator":"gte","value":2}
 ]}
 ```

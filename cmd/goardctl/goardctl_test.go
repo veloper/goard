@@ -71,8 +71,8 @@ func TestCLIInfo(t *testing.T) {
 	}
 
 	states, ok := info["states"].([]any)
-	if !ok || len(states) != 6 {
-		t.Errorf("expected 6 states, got %d", len(states))
+	if !ok || len(states) != 5 {
+		t.Errorf("expected 5 states, got %d", len(states))
 	}
 	types, ok := info["types"].([]any)
 	if !ok || len(types) != 4 {
@@ -240,19 +240,19 @@ func TestCLIIssues(t *testing.T) {
 	if err := get("issues/"+issueID, &stateOnly); err != nil {
 		t.Fatalf("get issue state: %v", err)
 	}
-	if stateOnly["state"] != "todo" {
-		t.Errorf("expected initial state todo, got %v", stateOnly["state"])
+	if stateOnly["state"] != "backlog" {
+		t.Errorf("expected initial state backlog, got %v", stateOnly["state"])
 	}
 
 	// issues state-update
 	var updated map[string]any
 	if err := put("issues/"+issueID+"/state", map[string]string{
-		"state": "qa",
+		"state": "review",
 	}, &updated); err != nil {
 		t.Fatalf("state update: %v", err)
 	}
-	if updated["state"] != "qa" {
-		t.Errorf("expected state qa, got %v", updated["state"])
+	if updated["state"] != "review" {
+		t.Errorf("expected state review, got %v", updated["state"])
 	}
 
 	// Verify state via slug
@@ -260,7 +260,7 @@ func TestCLIIssues(t *testing.T) {
 	if err := get("issues/"+issueSlug, &verified); err != nil {
 		t.Fatalf("verify state: %v", err)
 	}
-	if verified["state"] != "qa" {
+	if verified["state"] != "review" {
 		t.Errorf("verified state = %v, want qa", verified["state"])
 	}
 
@@ -274,7 +274,7 @@ func TestCLIIssues(t *testing.T) {
 	if afterUpdate["title"] != "Add ship rotation" {
 		t.Errorf("expected title 'Add ship rotation', got %v", afterUpdate["title"])
 	}
-	if afterUpdate["state"] != "qa" {
+	if afterUpdate["state"] != "review" {
 		t.Errorf("state should remain qa after title update, got %v", afterUpdate["state"])
 	}
 }

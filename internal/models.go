@@ -90,6 +90,6 @@ func (c *Config) Addr() string {
 	return c.Host + ":" + c.Port
 }
 
-var ValidStates = []string{"backlog", "todo", "in_progress", "qa", "done", "cancelled"}
+var ValidStates = []string{"backlog", "in_progress", "review", "done", "cancelled"}
 var ValidTypes = []string{"epic", "feature", "bug", "chore"}
 var ValidPriorityLevels = []int{0, 1, 2, 3, 4}

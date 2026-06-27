@@ -79,7 +79,7 @@ goardctl projects delete 1
 goardctl issues list ASTEROID-GAME
 
 # Filter by state or assignee
-goardctl issues list ASTEROID-GAME --state qa
+goardctl issues list ASTEROID-GAME --state review
 goardctl issues list ASTEROID-GAME --assignee 1
 
 # Show one issue
@@ -91,13 +91,13 @@ goardctl issues create ASTEROID-GAME "Add rotation" --type feature --priority 2
 goardctl issues create ASTEROID-GAME "Fix login bug" --type bug --priority 1
 
 # Update issue fields
-goardctl issues update 42 --title "Add ship rotation" --state qa
+goardctl issues update 42 --title "Add ship rotation" --state review
 
 # Show current state
 goardctl issues state 42
 
 # Update state (most common operation)
-goardctl issues state-update ASTEROID-GAME-42 qa
+goardctl issues state-update ASTEROID-GAME-42 review
 goardctl issues state-update 42 done
 ```
 

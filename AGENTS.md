@@ -43,7 +43,7 @@ User
 
 ### States (fixed pipeline)
 
-`backlog` → `todo` → `in_progress` → `qa` → `done` → `cancelled`
+`backlog` → `in_progress` → `review` → `done` → `cancelled`
 
 ### Types
 
@@ -127,20 +127,20 @@ PUT    /api/issues/{id}/state     Update issue state only
 DELETE /api/issues/{id}           Delete issue
 ```
 
-Filters: `?state=qa&assignee=<id>&q=search&page=1&per_page=50`
+Filters: `?state=review&assignee=<id>&q=search&page=1&per_page=50`
 
 Create issue example:
 ```json
 POST /api/projects/1/issues
 {"title": "Add rotation", "type": "feature", "priority": 2}
-→ {"id": 1, "slug": "ASTEROID-GAME-1", "state": "todo", ...}
+→ {"id": 1, "slug": "ASTEROID-GAME-1", "state": "backlog", ...}
 ```
 
 Update state example:
 ```json
 PUT /api/issues/1/state
-{"state": "qa"}
-→ {"id": 1, "slug": "ASTEROID-GAME-1", "state": "qa", ...}
+{"state": "review"}
+→ {"id": 1, "slug": "ASTEROID-GAME-1", "state": "review", ...}
 ```
 
 ### Comments
@@ -262,7 +262,7 @@ The server broadcasts JSON events when data changes. Events are suppressed for t
   "payload": {
     "id": 1,
     "changed": {
-      "state": {"before": "todo", "after": "qa"},
+      "state": {"before": "backlog", "after": "review"},
       "assignee": {"before": null, "after": 2}
     }
   }
@@ -328,9 +328,9 @@ docker compose --profile setup run setup
 ### Moving an issue through the pipeline
 
 ```
-POST /api/projects/1/issues   → {"slug": "GAME-1", "state": "todo"}
+POST /api/projects/1/issues   → {"slug": "GAME-1", "state": "backlog"}
 PUT  /api/issues/GAME-1/state → {"state": "in_progress"}
-PUT  /api/issues/GAME-1/state → {"state": "qa"}
+PUT  /api/issues/GAME-1/state → {"state": "review"}
 PUT  /api/issues/GAME-1/state → {"state": "done"}
 ```
 
@@ -346,7 +346,7 @@ Issues with slug `ASTEROID-GAME-42` can be accessed via:
 ### Quick reference for valid values
 
 ```
-States:    backlog, todo, in_progress, qa, done, cancelled
+States:    backlog, in_progress, review, done, cancelled
 Types:     epic, feature, bug, chore
 Priority:  0=none, 1=urgent, 2=high, 3=medium, 4=low
 ```
