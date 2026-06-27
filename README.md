@@ -5,9 +5,44 @@
 
 # Goard
 
-![Goard](docs/banner.png)
+Kanban for engineering teams that include AI agents.
+
+```bash
+docker run -p 8300:8300 \
+  -e GOARD_ADMIN_USERNAME=admin \
+  -e GOARD_ADMIN_PAT=pat_admin \
+  veloper/goard
+```
+
+Open http://localhost:8300, sign in, create a project, start tracking work.
+
+---
+
+## Features
+
+- **Kanban board** — six columns (backlog → done), priority-colored cards, assignee avatars
+- **MCP server** — every operation available to any LLM out of the box. No glue code.
+- **One binary** — Go + SQLite, no Postgres, no Redis, no container orchestration. Runs anywhere.
+- **Self-hosted** — your data stays on your infrastructure. Doesn't train anyone else's model.
+
+## How it works
+
+Create a project and get a kanban board. Each project has its own board with columns for backlog, todo, in progress, qa, done, cancelled. Issues have states, priorities (urgent → low), types (epic, feature, bug, chore), and assignees.
+
+The web UI works for humans. The MCP server and REST API work for agents. Both hit the same data — create an issue via MCP and it appears on the board in real time.
 
 ## Quickstart
+
+```bash
+docker run -p 8300:8300 \
+  -e GOARD_ADMIN_USERNAME=admin \
+  -e GOARD_ADMIN_PAT=pat_admin \
+  veloper/goard
+```
+
+Open http://localhost:8300, sign in with `admin` / `pat_admin`.
+
+### Docker Compose
 
 ```yaml
 services:
@@ -27,30 +62,15 @@ volumes:
 
 ```bash
 docker compose up -d
-open http://localhost:8300
-
-# Or install the CLI
-go install github.com/veloper/goard/cmd/goardctl@latest
 ```
 
-## How agents use it
+### CLI
 
-| Scenario | Flow |
-|---|---|
-| **Sprint planning** | Agent calls `create_issue` for each task via MCP, sets priority and assignee |
-| **Bug triage** | Agent calls `list_issues?filter=...`, finds open bugs, updates state |
-| **CI/CD hook** | Pipeline calls REST API to file issues on build failure |
-| **Human review** | Team checks the web dashboard, moves cards, leaves comments |
-
-## What's inside
-
-| Interface | For |
-|---|---|
-| **MCP server** | LLMs manage projects directly — 16 tools |
-| **REST API** | Code, CI/CD, custom integrations |
-| **WebSocket** | Real-time event stream |
-| **Web UI** | Read-only dashboard for human oversight |
-| **CLI** | Scripting and automation |
+```bash
+go install github.com/veloper/goard/cmd/goardctl@latest
+goardctl projects create "My Project" MY-PROJECT
+goardctl issues create MY-PROJECT "Fix login bug" --type bug --priority 1
+```
 
 ## Configuration
 
