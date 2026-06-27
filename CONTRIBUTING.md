@@ -35,7 +35,9 @@ go test ./... -count=1 -timeout 60s
 
 Push your branch and open a PR on GitHub against `veloper/goard main`. Say what changed and why. If it fixes an open issue, mention it.
 
-That's it. No CLA, no sign-off, no paperwork. If the change makes sense and the tests pass, it'll get merged.
+That's it. 
+
+---
 
 ## Running locally
 
@@ -46,3 +48,7 @@ GOARD_ADMIN_USERNAME=admin GOARD_ADMIN_PAT=pat_admin go run ./cmd/goard
 # Run the CLI against it
 GOARD_HOST=http://localhost:8300 GOARD_PAT=pat_admin go run ./cmd/goardctl projects list
 ```
+
+---
+
+Happy hacking!

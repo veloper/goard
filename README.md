@@ -57,14 +57,12 @@ $ docker compose exec goard goardctl users create developer
 - **Simple Design** 
   - Models: `projects` → `issues` → `comments` 
   - States: `backlog` → `in_progress` → `qa` → `done | cancelled`
-- **Project view** — issues grouped by state (backlog → done) with priority colors and assignee info
-- **MCP server** — every operation accessible to LLMs out of the box
-- **REST API** — full CRUD for projects, issues, comments, users
-- **WebSocket** — real-time updates across all clients
-- **goardctl CLI** — scripting and automation via Docker exec
-- **Filter DSL** — nested AND/OR queries with 10 operators
-- **Slug references** — issues have human-readable IDs like `ASTEROID-GAME-42`
-
+  - Types: `bug`, `feature`, `task`, `chore`
+- **MCP Server** - 16 tools designed for maximum agent efficiency
+- **REST API** - Full CRUD for projects, issues, comments, users
+- **WebSocket** - Real-time updates across all clients
+- **CLI Tool** - `goardctl` allows low level setup and control of Goard.
+- **Web UI** - Lightweight and responsive read-only interface for humans.
  
 
 ## Design Overview
@@ -99,14 +97,11 @@ flowchart TB
 
 ## Docs
 
-| | |
-|---|---|
-| **API** | [`docs/api.md`](docs/api.md) |
-| **CLI** | [`docs/cli.md`](docs/cli.md) |
-| **MCP** | [`docs/mcp.md`](docs/mcp.md) |
-| **WebSocket** | [`docs/websocket.md`](docs/websocket.md) |
-| **Docker** | [`docs/docker.md`](docs/docker.md) |
-| **Agent Guide** | [`AGENTS.md`](AGENTS.md) |
+[API](docs/api.md) | [CLI](docs/cli.md) | [MCP](docs/mcp.md) | [WebSocket](docs/websocket.md) | [Docker](docs/docker.md) | [Agent Guide](AGENTS.md)
+
+## Contributing
+
+All contributions are welcome! Please read the [CONTRIBUTING](CONTRIBUTING.md) guide for details.
 
 ## License
 
