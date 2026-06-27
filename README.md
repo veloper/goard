@@ -7,29 +7,6 @@
 
 ![Goard](docs/banner.png)
 
-Project tracker for teams that include AI agents.  
-MCP server + REST API + read-only web UI + CLI. One binary, embedded SQLite.
-
-```bash
-docker run -p 8300:8300 -e GOARD_ADMIN_USERNAME=admin -e GOARD_ADMIN_PAT=pat_admin veloper/goard
-```
-
----
-
-## What makes it different
-
-**MCP server, not just a REST API.**  
-Every tool, every operation, available to any LLM out of the box. No custom function calling, no glue code.
-
-**Your infrastructure is one binary.**  
-No Postgres. No Redis. No container orchestration. One `docker run` and you're done. The database is a file.
-
-**Self-hosted by design.**  
-Your issue data doesn't train anyone else's model. It stays on your infrastructure, in a SQLite file.
-
-**Built for automation first.**  
-The web UI is read-only. Everything — create, update, filter, sort, paginate — is designed for programmatic access.
-
 ## Quickstart
 
 ```yaml
@@ -50,11 +27,40 @@ volumes:
 
 ```bash
 docker compose up -d
-# Open http://localhost:8300  — sign in with admin / pat_admin
+open http://localhost:8300
 
 # Or install the CLI
 go install github.com/veloper/goard/cmd/goardctl@latest
 ```
+
+## How agents use it
+
+| Scenario | Flow |
+|---|---|
+| **Sprint planning** | Agent calls `create_issue` for each task via MCP, sets priority and assignee |
+| **Bug triage** | Agent calls `list_issues?filter=...`, finds open bugs, updates state |
+| **CI/CD hook** | Pipeline calls REST API to file issues on build failure |
+| **Human review** | Team checks the web dashboard, moves cards, leaves comments |
+
+## What's inside
+
+| Interface | For |
+|---|---|
+| **MCP server** | LLMs manage projects directly — 16 tools |
+| **REST API** | Code, CI/CD, custom integrations |
+| **WebSocket** | Real-time event stream |
+| **Web UI** | Read-only dashboard for human oversight |
+| **CLI** | Scripting and automation |
+
+## Configuration
+
+| Variable | Default | Required |
+|---|---|---|
+| `GOARD_ADMIN_USERNAME` | — | Yes |
+| `GOARD_ADMIN_PAT` | — | Yes |
+| `GOARD_PORT` | `8300` | |
+| `GOARD_HOST` | `""` (all) | |
+| `GOARD_DB_PATH` | `goard.db` | |
 
 ## Docs
 
