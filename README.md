@@ -5,7 +5,7 @@
 
 # Goard
 
-Project tracker with built-in MCP server, REST API, and web UI — one binary, embedded SQLite.
+![Goard](docs/banner.png)
 
 [Website](https://github.com/veloper/goard) •
 [Docs](docs/) •
