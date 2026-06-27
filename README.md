@@ -64,12 +64,18 @@ volumes:
 docker compose up -d
 ```
 
-### CLI
+### CLI (via Docker)
 
 ```bash
-go install github.com/veloper/goard/cmd/goardctl@latest
-goardctl projects create "My Project" MY-PROJECT
-goardctl issues create MY-PROJECT "Fix login bug" --type bug --priority 1
+# Create a project
+docker compose exec goard goardctl projects create "My Project" MY-PROJECT
+
+# Create an issue
+docker compose exec goard goardctl issues create MY-PROJECT "Fix login" --type bug --priority 1
+
+# List everything
+docker compose exec goard goardctl projects list
+docker compose exec goard goardctl issues list MY-PROJECT
 ```
 
 ## Configuration
