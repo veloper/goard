@@ -39,6 +39,7 @@ dockers:
   - image_templates:
       - "veloper/goard:{{ .Version }}"
       - "veloper/goard:latest"
+    dockerfile: .goreleaser.Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
