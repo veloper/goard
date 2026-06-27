@@ -29,7 +29,7 @@ backlog → in_progress → review → done → cancelled
 
 | Type | Description |
 |------|-------------|
-| `epic` | Large initiative, groups multiple issues |
+| `improvement` | Refactoring, performance, tech debt |
 | `feature` | New capability |
 | `bug` | Something broken |
 | `chore` | Maintenance, non-user-facing work |

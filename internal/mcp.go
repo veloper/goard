@@ -93,7 +93,7 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 		mcp.WithString("project_id", mcp.Description("Project ID or slug"), mcp.Required()),
 		mcp.WithString("state", mcp.Description("Filter by state: backlog, in_progress, review, done, cancelled")),
 		mcp.WithNumber("assignee", mcp.Description("Filter by assignee user ID")),
-		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: type, state, priority, assignee_user_id, created_by_user_id | operators: eq, neq, gt, gte, lt, lte, in, not_in, like, is | type: epic/feature/bug/chore | state: backlog/in_progress/review/done/cancelled | priority: 0-4 | assignee/created_by: numeric user ID`)),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: type, state, priority, assignee_user_id, created_by_user_id | operators: eq, neq, gt, gte, lt, lte, in, not_in, like, is | type: bug/feature/chore/improvement | state: backlog/in_progress/review/done/cancelled | priority: 0-4 | assignee/created_by: numeric user ID`)),
 		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
 		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
 		mcp.WithString("sort", mcp.Description("Sort column: title, slug, type, state, priority, created_at, updated_at")),
@@ -111,7 +111,7 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 			mcp.WithString("project_id", mcp.Description("Project ID or slug"), mcp.Required()),
 			mcp.WithString("title", mcp.Description("Issue title"), mcp.Required()),
 			mcp.WithString("description", mcp.Description("Issue description")),
-			mcp.WithString("type", mcp.Description("Issue type: epic, feature, bug, chore")),
+			mcp.WithString("type", mcp.Description("Issue type: bug, feature, chore, improvement")),
 			mcp.WithString("state", mcp.Description("Initial state")),
 			mcp.WithNumber("priority", mcp.Description("Priority: 0=none, 1=urgent, 2=high, 3=medium, 4=low")),
 		), handleCreateIssue(store))

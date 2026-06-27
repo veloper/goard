@@ -312,7 +312,7 @@ func TestCreateIssue(t *testing.T) {
 	p, _ := s.CreateProject("Asteroid Game", "", "", alice.ID)
 
 	iss, err := s.CreateIssue(p.ID, "Add ship rotation", "Left/right arrows rotate the ship",
-		"feature", "todo", alice.ID, 0, alice.ID, 2)
+		"feature", "backlog", alice.ID, 0, alice.ID, 2)
 	if err != nil {
 		t.Fatalf("CreateIssue: %v", err)
 	}
@@ -325,7 +325,7 @@ func TestCreateIssue(t *testing.T) {
 	if iss.Type != "feature" {
 		t.Errorf("expected type feature, got %s", iss.Type)
 	}
-	if iss.State != "todo" {
+	if iss.State != "backlog" {
 		t.Errorf("expected state todo, got %s", iss.State)
 	}
 	if iss.Priority != 2 {
@@ -357,17 +357,17 @@ func TestCreateIssue_defaults(t *testing.T) {
 	}
 }
 
-func TestCreateIssue_epic(t *testing.T) {
+func TestCreateIssue_improvement(t *testing.T) {
 	s := newTestStore(t)
 	alice := getUserByPAT(t, s, "pat_alice")
-	p, _ := s.CreateProject("Epic Project", "", "", alice.ID)
+	p, _ := s.CreateProject("Improvement Project", "", "", alice.ID)
 
-	iss, err := s.CreateIssue(p.ID, "Big Initiative", "", "epic", "backlog", 0, 0, alice.ID, 1)
+	iss, err := s.CreateIssue(p.ID, "Refactor module", "", "improvement", "backlog", 0, 0, alice.ID, 1)
 	if err != nil {
 		t.Fatalf("CreateIssue: %v", err)
 	}
-	if iss.Type != "epic" {
-		t.Errorf("expected type epic, got %s", iss.Type)
+	if iss.Type != "improvement" {
+		t.Errorf("expected type improvement, got %s", iss.Type)
 	}
 }
 
@@ -376,8 +376,8 @@ func TestCreateIssue_parent(t *testing.T) {
 	alice := getUserByPAT(t, s, "pat_alice")
 	p, _ := s.CreateProject("Hierarchy", "", "", alice.ID)
 
-	parent, _ := s.CreateIssue(p.ID, "Parent Epic", "", "epic", "backlog", 0, 0, alice.ID, 0)
-	child, err := s.CreateIssue(p.ID, "Child Task", "", "feature", "todo", alice.ID, parent.ID, alice.ID, 0)
+	parent, _ := s.CreateIssue(p.ID, "Parent Task", "", "feature", "backlog", 0, 0, alice.ID, 0)
+	child, err := s.CreateIssue(p.ID, "Child Task", "", "feature", "backlog", alice.ID, parent.ID, alice.ID, 0)
 	if err != nil {
 		t.Fatalf("CreateIssue: %v", err)
 	}
@@ -405,11 +405,11 @@ func TestListIssues_filterByState(t *testing.T) {
 	alice := getUserByPAT(t, s, "pat_alice")
 	p, _ := s.CreateProject("Filter", "", "", alice.ID)
 
-	s.CreateIssue(p.ID, "One", "", "", "todo", 0, 0, alice.ID, 0)
+	s.CreateIssue(p.ID, "One", "", "", "backlog", 0, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Two", "", "", "review", 0, 0, alice.ID, 0)
-	s.CreateIssue(p.ID, "Three", "", "", "todo", 0, 0, alice.ID, 0)
+	s.CreateIssue(p.ID, "Three", "", "", "backlog", 0, 0, alice.ID, 0)
 
-	issues, _, _ := s.ListIssues(p.ID, IssueFilter{State: "todo"})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{State: "backlog"})
 	if len(issues) != 2 {
 		t.Errorf("expected 2 todo issues, got %d", len(issues))
 	}
@@ -462,9 +462,9 @@ func TestListIssues_filterByType(t *testing.T) {
 	if len(issues) != 1 {
 		t.Errorf("expected 1 feature, got %d", len(issues))
 	}
-	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Type: "epic"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Type: "improvement"})
 	if len(issues) != 0 {
-		t.Errorf("expected 0 epics, got %d", len(issues))
+		t.Errorf("expected 0 improvements, got %d", len(issues))
 	}
 }
 
@@ -581,7 +581,7 @@ func TestUpdateIssue_state(t *testing.T) {
 	s := newTestStore(t)
 	alice := getUserByPAT(t, s, "pat_alice")
 	p, _ := s.CreateProject("Flow", "", "", alice.ID)
-	iss, _ := s.CreateIssue(p.ID, "Task", "", "", "todo", 0, 0, alice.ID, 0)
+	iss, _ := s.CreateIssue(p.ID, "Task", "", "", "backlog", 0, 0, alice.ID, 0)
 
 	updated, err := s.UpdateIssue(iss.ID, "", "", "", "done", nil, nil, nil)
 	if err != nil {

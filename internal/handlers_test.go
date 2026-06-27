@@ -311,17 +311,17 @@ func TestListIssuesHandler_filterByState(t *testing.T) {
 	s, h := newTestHandler(t)
 	alice := getUserByPAT(t, s, "pat_alice")
 	p := mustCreateProject(t, s, "Filter", alice.ID)
-	s.CreateIssue(p.ID, "One", "", "", "todo", 0, 0, alice.ID, 0)
+	s.CreateIssue(p.ID, "One", "", "", "backlog", 0, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Two", "", "", "review", 0, 0, alice.ID, 0)
 
-	req := handlerRequest(t, "GET", fmt.Sprintf("/api/projects/%d", p.ID)+"/issues?state=todo", nil, alice)
+	req := handlerRequest(t, "GET", fmt.Sprintf("/api/projects/%d", p.ID)+"/issues?state=backlog", nil, alice)
 	rr := serveHandler(h, req)
 
 	assertStatus(t, rr.Code, 200)
 	var issues []Issue
 	mustDecode(t, rr.Body, &issues)
 	if len(issues) != 1 {
-		t.Errorf("expected 1 todo issue, got %d", len(issues))
+		t.Errorf("expected 1 backlog issue, got %d", len(issues))
 	}
 }
 

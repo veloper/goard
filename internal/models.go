@@ -91,5 +91,5 @@ func (c *Config) Addr() string {
 }
 
 var ValidStates = []string{"backlog", "in_progress", "review", "done", "cancelled"}
-var ValidTypes = []string{"epic", "feature", "bug", "chore"}
+var ValidTypes = []string{"bug", "feature", "chore", "improvement"}
 var ValidPriorityLevels = []int{0, 1, 2, 3, 4}

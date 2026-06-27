@@ -68,7 +68,7 @@ func TestFilterGroup_ToSQL_in(t *testing.T) {
 	allowed := AllowedFields{"state": "state"}
 
 	raw := `{"combinator":"or","rules":[
-		{"field":"state","operator":"in","value":["todo","in_progress"]}
+		{"field":"state","operator":"in","value":["backlog","in_progress"]}
 	]}`
 
 	var fg FilterGroup

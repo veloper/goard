@@ -47,7 +47,7 @@ User
 
 ### Types
 
-`epic`, `feature`, `bug`, `chore`
+`bug`, `feature`, `chore`, `improvement`
 
 ### Priority
 
@@ -347,7 +347,7 @@ Issues with slug `ASTEROID-GAME-42` can be accessed via:
 
 ```
 States:    backlog, in_progress, review, done, cancelled
-Types:     epic, feature, bug, chore
+Types:     bug, feature, chore, improvement
 Priority:  0=none, 1=urgent, 2=high, 3=medium, 4=low
 ```
 

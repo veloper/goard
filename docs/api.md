@@ -29,7 +29,7 @@ Returns server metadata. Call this first to discover valid values.
 ```json
 {"meta": {"status": 200}, "data": {
   "states": ["backlog", "in_progress", "review", "done", "cancelled"],
-  "types": ["epic", "feature", "bug", "chore"],
+  "types": ["bug", "feature", "chore", "improvement"],
   "priority_levels": [0, 1, 2, 3, 4],
   "priority_labels": {"0": "none", "1": "urgent", "2": "high", "3": "medium", "4": "low"},
   "users": [{"id": 1, "username": "admin"}],
@@ -184,7 +184,7 @@ POST /api/projects/{project_id}/issues
 |-------|------|-------------|
 | `title` | string | **Required.** Issue title |
 | `description` | string | Issue description |
-| `type` | string | `epic`, `feature`, `bug`, or `chore` |
+| `type` | string | `bug`, `feature`, `chore`, or `improvement` |
 | `state` | string | `backlog`, `in_progress`, `review`, `done`, `cancelled` |
 | `assignee` | int | User ID to assign (0 = unassigned) |
 | `priority` | int | `0`=none, `1`=urgent, `2`=high, `3`=medium, `4`=low |
