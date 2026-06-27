@@ -45,8 +45,8 @@ internal/
 ├── mcp.go            MCP server + 16 tool handlers
 └── models.go         Data types and static values
 cmd/
-├── ticketer/main.go  Server entry point, routing
-└── tktrctl/          CLI binary (Cobra commands)
+├── goard/main.go  Server entry point, routing
+└── goardctl/          CLI binary (Cobra commands)
 ```
 
 ### Serving All Interfaces on One Port

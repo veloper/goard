@@ -21,10 +21,10 @@ func mcpUserFromCtx(ctx context.Context) *User {
 	return u
 }
 
-// NewMCPServer creates an MCP server with all Ticketer tools backed by the Store.
+// NewMCPServer creates an MCP server with all Goard tools backed by the Store.
 func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 	s := server.NewMCPServer(
-		"ticketer",
+		"goard",
 		"1.0.0",
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, true),
@@ -32,12 +32,17 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 
 	// ── Info — always available ──
 	s.AddTool(mcp.NewTool("get_info",
-		mcp.WithDescription("Discover the full Ticketer surface — valid states (backlog→done), issue types, priority levels with labels, all registered users, and all projects. Call this first to understand what values are accepted by other tools."),
+		mcp.WithDescription("Discover the full Goard surface — valid states (backlog→done), issue types, priority levels with labels, all registered users, and all projects. Call this first to understand what values are accepted by other tools."),
 	), handleGetInfo(store))
 
 	// ── Users — always available (read-only) ──
 	s.AddTool(mcp.NewTool("list_users",
 		mcp.WithDescription("List all users"),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: username, is_admin | operators: eq, neq, like, is | is_admin values: true/false`)),
+		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
+		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
+		mcp.WithString("sort", mcp.Description("Sort column: username, is_admin, created_at, updated_at")),
+		mcp.WithString("dir", mcp.Description("Sort direction: asc or desc")),
 	), handleListUsers(store))
 
 	s.AddTool(mcp.NewTool("get_user",
@@ -48,6 +53,11 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 	// ── Projects — read-only for user role ──
 	s.AddTool(mcp.NewTool("list_projects",
 		mcp.WithDescription("List all projects"),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: name, slug, created_by_user_id | operators: eq, neq, like, is, in, not_in | created_by_user_id: numeric user ID`)),
+		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
+		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
+		mcp.WithString("sort", mcp.Description("Sort column: name, slug, created_at, updated_at")),
+		mcp.WithString("dir", mcp.Description("Sort direction: asc or desc")),
 	), handleListProjects(store))
 
 	s.AddTool(mcp.NewTool("get_project",
@@ -79,10 +89,15 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 
 	// ── Issues — read-only for user role ──
 	s.AddTool(mcp.NewTool("list_issues",
-		mcp.WithDescription("List all issues in a project, optionally filtered by state or assignee"),
+		mcp.WithDescription("List all issues in a project, optionally filtered by state, assignee, or custom filter"),
 		mcp.WithString("project_id", mcp.Description("Project ID or slug"), mcp.Required()),
-		mcp.WithString("state", mcp.Description("Filter by state")),
+		mcp.WithString("state", mcp.Description("Filter by state: backlog, todo, in_progress, qa, done, cancelled")),
 		mcp.WithNumber("assignee", mcp.Description("Filter by assignee user ID")),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: type, state, priority, assignee_user_id, created_by_user_id | operators: eq, neq, gt, gte, lt, lte, in, not_in, like, is | type: epic/feature/bug/chore | state: backlog/todo/in_progress/qa/done/cancelled | priority: 0-4 | assignee/created_by: numeric user ID`)),
+		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
+		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
+		mcp.WithString("sort", mcp.Description("Sort column: title, slug, type, state, priority, created_at, updated_at")),
+		mcp.WithString("dir", mcp.Description("Sort direction: asc or desc")),
 	), handleListIssues(store))
 
 	s.AddTool(mcp.NewTool("get_issue",
@@ -126,8 +141,13 @@ func NewMCPServer(store *Store, userRole bool) *server.MCPServer {
 
 	// ── Comments — always available ──
 	s.AddTool(mcp.NewTool("list_comments",
-		mcp.WithDescription("List all comments on an issue, oldest first"),
+		mcp.WithDescription("List all comments on an issue, ordered by creation date"),
 		mcp.WithString("issue_id", mcp.Description("Issue ID or slug"), mcp.Required()),
+		mcp.WithString("filter", mcp.Description(`react-querybuilder filter: {"combinator":"and","rules":[{"field":"<name>","operator":"<op>","value":"<val>"}]} | fields: author_user_id, created_by_user_id | operators: eq, neq, is | author/created_by: numeric user ID`)),
+		mcp.WithNumber("page", mcp.Description("Page number, default 1")),
+		mcp.WithNumber("per_page", mcp.Description("Results per page, default 50")),
+		mcp.WithString("sort", mcp.Description("Sort column: created_at, updated_at")),
+		mcp.WithString("dir", mcp.Description("Sort direction: asc or desc")),
 	), handleListComments(store))
 
 	s.AddTool(mcp.NewTool("add_comment",
@@ -147,6 +167,53 @@ func textResult(text string) *mcp.CallToolResult {
 	return mcp.NewToolResultText(text)
 }
 
+// mcpResult wraps data in the API envelope for MCP tool responses.
+func mcpResult(v any) *mcp.CallToolResult {
+	r, err := mcp.NewToolResultJSON(envelope{
+		Meta: envelopeMeta{Status: 200},
+		Data: v,
+	})
+	if err != nil {
+		return mcp.NewToolResultError("marshal: " + err.Error())
+	}
+	return r
+}
+
+func mcpFilter(args map[string]any, allowed AllowedFields) (string, []any) {
+	s, _ := args["filter"].(string)
+	if s == "" {
+		return "", nil
+	}
+	fg, err := ParseFilter(s)
+	if err != nil {
+		return "", nil
+	}
+	return fg.ToSQL(allowed)
+}
+
+func intFromArgs(args map[string]any, key string, defaultVal int) int {
+	if v, ok := args[key].(float64); ok {
+		return int(v)
+	}
+	return defaultVal
+}
+
+func sortFromArgs(args map[string]any, allowed sortWhitelist) string {
+	col, _ := args["sort"].(string)
+	if col == "" {
+		return ""
+	}
+	expr, ok := allowed[col]
+	if !ok {
+		return ""
+	}
+	dir, _ := args["dir"].(string)
+	if dir != "asc" && dir != "desc" {
+		dir = "asc"
+	}
+	return fmt.Sprintf("ORDER BY %s %s", expr, dir)
+}
+
 func jsonResult(v any) *mcp.CallToolResult {
 	r, err := mcp.NewToolResultJSON(v)
 	if err != nil {
@@ -159,26 +226,33 @@ func jsonResult(v any) *mcp.CallToolResult {
 	return r
 }
 
+// cleanErr returns a user-facing message for the given error.
 func cleanErr(err error) string {
+	msg, _ := cleanErrStatus(err)
+	return msg
+}
+
+// cleanErrStatus returns a user-facing message and an appropriate HTTP status code.
+func cleanErrStatus(err error) (string, int) {
 	msg := err.Error()
 	switch {
 	case strings.Contains(msg, "UNIQUE constraint failed"):
 		if strings.Contains(msg, "projects.slug") {
-			return "a project with this slug already exists"
+			return "a project with this slug already exists", 409
 		}
 		if strings.Contains(msg, "users.username") {
-			return "a user with this username already exists"
+			return "a user with this username already exists", 409
 		}
 		if strings.Contains(msg, "users.pat") {
-			return "a user with this PAT already exists"
+			return "a user with this PAT already exists", 409
 		}
-		return "a record with that unique value already exists"
+		return "a record with that unique value already exists", 409
 	case strings.Contains(msg, "FOREIGN KEY constraint failed"):
-		return "referenced entity does not exist"
+		return "referenced entity does not exist", 404
 	case strings.Contains(msg, "no rows in result set"):
-		return "not found"
+		return "not found", 404
 	default:
-		return msg
+		return msg, 500
 	}
 }
 
@@ -206,10 +280,10 @@ func resolveIssueID(store *Store, id string) (int64, string) {
 
 func handleGetInfo(store *Store) func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		users, _ := store.ListUsers()
-		projects, _ := store.ListProjects()
+		users, _ := store.ListUsers(1, 9999, "", "")
+		projects, _ := store.ListProjects(1, 9999, "", "")
 		me := mcpUserFromCtx(ctx)
-		return jsonResult(map[string]any{
+		return mcpResult(map[string]any{
 			"states":          ValidStates,
 			"types":           ValidTypes,
 			"priority_levels": ValidPriorityLevels,
@@ -223,11 +297,16 @@ func handleGetInfo(store *Store) func(ctx context.Context, req mcp.CallToolReque
 
 func handleListUsers(store *Store) func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		users, err := store.ListUsers()
+		args := req.GetArguments()
+		filterClause, filterArgs := mcpFilter(args, userFilterFields)
+		page := intFromArgs(args, "page", 1)
+		perPage := intFromArgs(args, "per_page", 50)
+		orderBy := sortFromArgs(args, userSorts)
+		users, err := store.ListUsers(page, perPage, orderBy, filterClause, filterArgs...)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(users), nil
+		return mcpResult(users), nil
 	}
 }
 
@@ -238,17 +317,22 @@ func handleGetUser(store *Store) func(ctx context.Context, req mcp.CallToolReque
 		if err != nil {
 			return mcp.NewToolResultError("user not found"), nil
 		}
-		return jsonResult(user), nil
+		return mcpResult(user), nil
 	}
 }
 
 func handleListProjects(store *Store) func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		projects, err := store.ListProjects()
+		args := req.GetArguments()
+		filterClause, filterArgs := mcpFilter(args, projectFilterFields)
+		page := intFromArgs(args, "page", 1)
+		perPage := intFromArgs(args, "per_page", 50)
+		orderBy := sortFromArgs(args, projectSorts)
+		projects, err := store.ListProjects(page, perPage, orderBy, filterClause, filterArgs...)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(projects), nil
+		return mcpResult(projects), nil
 	}
 }
 
@@ -263,7 +347,7 @@ func handleGetProject(store *Store) func(ctx context.Context, req mcp.CallToolRe
 		if err != nil {
 			return mcp.NewToolResultError("project not found"), nil
 		}
-		return jsonResult(p), nil
+		return mcpResult(p), nil
 	}
 }
 
@@ -272,13 +356,13 @@ func handleCreateProject(store *Store) func(ctx context.Context, req mcp.CallToo
 		args := req.GetArguments()
 		name := args["name"].(string)
 		slug := args["slug"].(string)
-		desc, _ := args["description"].(string)
-		// Need a user context — for MCP we use user ID 1 (admin)
-		p, err := store.CreateProject(name, slug, desc, 1)
+		description, _ := args["description"].(string)
+		user := mcpUserFromCtx(ctx)
+		p, err := store.CreateProject(name, slug, description, user.ID)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(p), nil
+		return mcpResult(p), nil
 	}
 }
 
@@ -292,12 +376,12 @@ func handleUpdateProject(store *Store) func(ctx context.Context, req mcp.CallToo
 		}
 		name, _ := args["name"].(string)
 		slug, _ := args["slug"].(string)
-		desc, _ := args["description"].(string)
-		p, err := store.UpdateProject(id, name, slug, desc)
+		description, _ := args["description"].(string)
+		p, err := store.UpdateProject(id, name, slug, description)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(p), nil
+		return mcpResult(p), nil
 	}
 }
 
@@ -323,18 +407,27 @@ func handleListIssues(store *Store) func(ctx context.Context, req mcp.CallToolRe
 		if errStr != "" {
 			return mcp.NewToolResultError(errStr), nil
 		}
-		f := IssueFilter{}
+		filterClause, filterArgs := mcpFilter(args, issueFilterFields)
+		page := intFromArgs(args, "page", 1)
+		perPage := intFromArgs(args, "per_page", 50)
+		f := IssueFilter{
+			Page:    page,
+			PerPage: perPage,
+			OrderBy: sortFromArgs(args, issueSorts),
+			FilterClause: filterClause,
+			FilterArgs:   filterArgs,
+		}
 		if s, ok := args["state"].(string); ok {
 			f.State = s
 		}
 		if a, ok := args["assignee"].(float64); ok {
-			f.Assignee = int64(a)
+			f.AssigneeUserID = int64(a)
 		}
-		issues, err := store.ListIssues(pid, f)
+		issues, _, err := store.ListIssues(pid, f)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(issues), nil
+		return mcpResult(issues), nil
 	}
 }
 
@@ -349,7 +442,7 @@ func handleGetIssue(store *Store) func(ctx context.Context, req mcp.CallToolRequ
 		if err != nil {
 			return mcp.NewToolResultError("issue not found"), nil
 		}
-		return jsonResult(iss), nil
+		return mcpResult(iss), nil
 	}
 }
 
@@ -362,18 +455,19 @@ func handleCreateIssue(store *Store) func(ctx context.Context, req mcp.CallToolR
 			return mcp.NewToolResultError(errStr), nil
 		}
 		title := args["title"].(string)
-		desc, _ := args["description"].(string)
+		description, _ := args["description"].(string)
 		typ, _ := args["type"].(string)
 		state, _ := args["state"].(string)
 		priority := 3
 		if p, ok := args["priority"].(float64); ok {
 			priority = int(p)
 		}
-		iss, err := store.CreateIssue(pid, title, desc, typ, state, 0, 0, 1, priority)
+		user := mcpUserFromCtx(ctx)
+		iss, err := store.CreateIssue(pid, title, description, typ, state, 0, 0, user.ID, priority)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(iss), nil
+		return mcpResult(iss), nil
 	}
 }
 
@@ -386,22 +480,24 @@ func handleUpdateIssue(store *Store) func(ctx context.Context, req mcp.CallToolR
 			return mcp.NewToolResultError(errStr), nil
 		}
 		title, _ := args["title"].(string)
-		desc, _ := args["description"].(string)
+		description, _ := args["description"].(string)
 		typ, _ := args["type"].(string)
 		state, _ := args["state"].(string)
-		var priority int
+		var priority *int
 		if p, ok := args["priority"].(float64); ok {
-			priority = int(p)
+			v := int(p)
+			priority = &v
 		}
-		var assignee int64
+		var assigneeUserID *int64
 		if a, ok := args["assignee"].(float64); ok {
-			assignee = int64(a)
+			v := int64(a)
+			assigneeUserID = &v
 		}
-		iss, err := store.UpdateIssue(id, title, desc, typ, state, assignee, 0, priority)
+		iss, err := store.UpdateIssue(id, title, description, typ, state, assigneeUserID, nil, priority)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(iss), nil
+		return mcpResult(iss), nil
 	}
 }
 
@@ -414,11 +510,11 @@ func handleUpdateIssueState(store *Store) func(ctx context.Context, req mcp.Call
 		if errStr != "" {
 			return mcp.NewToolResultError(errStr), nil
 		}
-		iss, err := store.UpdateIssue(id, "", "", "", newState, 0, 0, 0)
+		iss, err := store.UpdateIssue(id, "", "", "", newState, nil, nil, nil)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(iss), nil
+		return mcpResult(iss), nil
 	}
 }
 
@@ -438,16 +534,21 @@ func handleDeleteIssue(store *Store) func(ctx context.Context, req mcp.CallToolR
 
 func handleListComments(store *Store) func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args := req.GetArguments()
 		idStr := req.GetString("issue_id", "")
 		id, errStr := resolveIssueID(store, idStr)
 		if errStr != "" {
 			return mcp.NewToolResultError(errStr), nil
 		}
-		comments, err := store.ListComments(id)
+		filterClause, filterArgs := mcpFilter(args, commentFilterFields)
+		page := intFromArgs(args, "page", 1)
+		perPage := intFromArgs(args, "per_page", 50)
+		orderBy := sortFromArgs(args, commentSorts)
+		comments, err := store.ListComments(id, page, perPage, orderBy, filterClause, filterArgs...)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(comments), nil
+		return mcpResult(comments), nil
 	}
 }
 
@@ -460,11 +561,12 @@ func handleAddComment(store *Store) func(ctx context.Context, req mcp.CallToolRe
 		if errStr != "" {
 			return mcp.NewToolResultError(errStr), nil
 		}
-		c, err := store.CreateComment(id, body, 1, 1)
+		user := mcpUserFromCtx(ctx)
+		c, err := store.CreateComment(id, body, user.ID, user.ID)
 		if err != nil {
 			return mcp.NewToolResultError(cleanErr(err)), nil
 		}
-		return jsonResult(c), nil
+		return mcpResult(c), nil
 	}
 }
 

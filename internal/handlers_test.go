@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"testing"
@@ -83,8 +84,8 @@ func TestCreateProjectHandler(t *testing.T) {
 	if p.Name != "My Project" {
 		t.Errorf("expected name %q, got %q", "My Project", p.Name)
 	}
-	if p.CreatedBy != alice.ID {
-		t.Errorf("expected created_by %q, got %q", alice.ID, p.CreatedBy)
+	if p.CreatedBy.ID != alice.ID {
+		t.Errorf("expected created_by.id %d, got %d", alice.ID, p.CreatedBy.ID)
 	}
 }
 
@@ -437,7 +438,7 @@ func TestCreateCommentHandler_byIssueSlug(t *testing.T) {
 	}
 
 	// Verify the comment is attached to the right issue
-	comments, _ := s.ListComments(iss.ID)
+	comments, _ := s.ListComments(iss.ID, 1, 50, "", "")
 	if len(comments) != 1 {
 		t.Errorf("expected 1 comment, got %d", len(comments))
 	}
@@ -467,8 +468,8 @@ func TestUpdateIssueHandler(t *testing.T) {
 	if got.State != "qa" {
 		t.Errorf("expected state review, got %s", got.State)
 	}
-	if got.Assignee != bob.ID {
-		t.Errorf("expected assignee %q, got %q", bob.ID, got.Assignee)
+	if got.Assignee.ID != bob.ID {
+		t.Errorf("expected assignee.id %d, got %d", bob.ID, got.Assignee.ID)
 	}
 	if got.Priority != 1 {
 		t.Errorf("expected priority 1, got %d", got.Priority)
@@ -514,7 +515,6 @@ func TestInfo(t *testing.T) {
 		PriorityLabels  map[string]string `json:"priority_labels"`
 		Users           []struct {
 			ID          int64  `json:"id"`
-			DisplayName string `json:"display_name"`
 		} `json:"users"`
 		Projects []struct {
 			ID   int64  `json:"id"`
@@ -628,8 +628,8 @@ func TestCreateCommentHandler(t *testing.T) {
 	if c.Body != "A comment" {
 		t.Errorf("expected body %q, got %q", "A comment", c.Body)
 	}
-	if c.Author != alice.ID {
-		t.Errorf("expected author %q, got %q", alice.ID, c.Author)
+	if c.Author.ID != alice.ID {
+		t.Errorf("expected author.id %d, got %d", alice.ID, c.Author.ID)
 	}
 }
 
@@ -669,6 +669,229 @@ func TestListCommentsHandler(t *testing.T) {
 
 // ── Helpers ──
 
+func TestGetUserPAT(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+
+	req := handlerRequest(t, "GET", fmt.Sprintf("/api/users/%d/pat", admin.ID), nil, admin)
+	rr := serveHandler(h, req)
+
+	assertStatus(t, rr.Code, 200)
+	var resp struct {
+		PAT string `json:"pat"`
+	}
+	mustDecode(t, rr.Body, &resp)
+	if resp.PAT != "pat_admin" {
+		t.Errorf("expected pat pat_admin, got %s", resp.PAT)
+	}
+}
+
+func TestGetUserPAT_notFound(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+
+	req := handlerRequest(t, "GET", "/api/users/999/pat", nil, admin)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 404)
+}
+
+func TestGetUserPAT_requiresAdmin(t *testing.T) {
+	s, h := newTestHandler(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	bob := getUserByPAT(t, s, "pat_bob")
+
+	req := handlerRequest(t, "GET", fmt.Sprintf("/api/users/%d/pat", alice.ID), nil, bob)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 403)
+}
+
+func TestSetUserPAT(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+	alice := getUserByPAT(t, s, "pat_alice")
+
+	req := handlerRequest(t, "PUT", fmt.Sprintf("/api/users/%d/pat", alice.ID), map[string]string{"pat": "pat_new"}, admin)
+	rr := serveHandler(h, req)
+
+	assertStatus(t, rr.Code, 200)
+	var resp struct {
+		PAT string `json:"pat"`
+	}
+	mustDecode(t, rr.Body, &resp)
+	if resp.PAT != "pat_new" {
+		t.Errorf("expected pat pat_new, got %s", resp.PAT)
+	}
+
+	// Verify it works for auth
+	u, err := s.GetUserByPAT("pat_new")
+	if err != nil {
+		t.Fatalf("new PAT should work: %v", err)
+	}
+	if u.ID != alice.ID {
+		t.Errorf("expected user %d, got %d", alice.ID, u.ID)
+	}
+}
+
+func TestSetUserPAT_requiresPat(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+	alice := getUserByPAT(t, s, "pat_alice")
+
+	req := handlerRequest(t, "PUT", fmt.Sprintf("/api/users/%d/pat", alice.ID), map[string]string{}, admin)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 400)
+}
+
+func TestSetUserPAT_requiresAdmin(t *testing.T) {
+	s, h := newTestHandler(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	bob := getUserByPAT(t, s, "pat_bob")
+
+	req := handlerRequest(t, "PUT", fmt.Sprintf("/api/users/%d/pat", alice.ID), map[string]string{"pat": "pat_new"}, bob)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 403)
+}
+
+func TestCreateUserHandler(t *testing.T) {
+	s, h := newTestHandler(t)
+	admin := getUserByPAT(t, s, "pat_alice")
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ = s.GetUserByPAT("pat_admin")
+
+	req := handlerRequest(t, "POST", "/api/users", map[string]any{
+		"username": "newguy",
+		"admin":    false,
+	}, admin)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 201)
+
+	var resp struct {
+		User map[string]any `json:"user"`
+		PAT  string         `json:"pat"`
+	}
+	mustDecode(t, rr.Body, &resp)
+	if resp.User["username"] != "newguy" {
+		t.Errorf("username = %v, want newguy", resp.User["username"])
+	}
+	if resp.PAT == "" {
+		t.Error("expected non-empty PAT in response")
+	}
+}
+
+func TestCreateUserHandler_requiresAdmin(t *testing.T) {
+	s, h := newTestHandler(t)
+	bob := getUserByPAT(t, s, "pat_bob")
+
+	req := handlerRequest(t, "POST", "/api/users", map[string]any{"username": "u"}, bob)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 403)
+}
+
+func TestCreateUserHandler_missingUsername(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+
+	req := handlerRequest(t, "POST", "/api/users", map[string]any{}, admin)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 400)
+}
+
+func TestDeleteUserHandler(t *testing.T) {
+	s, h := newTestHandler(t)
+	s.EnsureAdmin("admin", "pat_admin")
+	admin, _ := s.GetUserByPAT("pat_admin")
+	u, _ := s.CreateUser("deleteme", "pat_delete", false)
+
+	req := handlerRequest(t, "DELETE", fmt.Sprintf("/api/users/%d", u.ID), nil, admin)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 204)
+
+	// Verify deleted
+	_, err := s.GetUser(u.ID)
+	if err == nil {
+		t.Error("expected user to be deleted")
+	}
+}
+
+func TestDeleteUserHandler_requiresAdmin(t *testing.T) {
+	s, h := newTestHandler(t)
+	bob := getUserByPAT(t, s, "pat_bob")
+	u, _ := s.CreateUser("deleteme", "pat_delete", false)
+
+	req := handlerRequest(t, "DELETE", fmt.Sprintf("/api/users/%d", u.ID), nil, bob)
+	rr := serveHandler(h, req)
+	assertStatus(t, rr.Code, 403)
+}
+
+func TestListIssuesHandler_paginationAndSort(t *testing.T) {
+	s, h := newTestHandler(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	p := mustCreateProject(t, s, "Pagination", alice.ID)
+	for i := 0; i < 10; i++ {
+		mustCreateIssue(t, s, p.ID, fmt.Sprintf("Issue %d", i), alice.ID)
+	}
+
+	t.Run("pagination", func(t *testing.T) {
+		req := handlerRequest(t, "GET", fmt.Sprintf("/api/projects/%d/issues?page=1&per_page=3", p.ID), nil, alice)
+		rr := serveHandler(h, req)
+		assertStatus(t, rr.Code, 200)
+
+		var full struct {
+			Meta struct {
+				Page    int `json:"page"`
+				PerPage int `json:"per_page"`
+				Total   int `json:"total"`
+			} `json:"meta"`
+			Data json.RawMessage `json:"data"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&full); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if full.Meta.Page != 1 {
+			t.Errorf("page = %d, want 1", full.Meta.Page)
+		}
+		if full.Meta.PerPage != 3 {
+			t.Errorf("per_page = %d, want 3", full.Meta.PerPage)
+		}
+		if full.Meta.Total != 10 {
+			t.Errorf("total = %d, want 10", full.Meta.Total)
+		}
+	})
+
+	t.Run("sort", func(t *testing.T) {
+		req := handlerRequest(t, "GET", fmt.Sprintf("/api/projects/%d/issues?sort=title&dir=desc", p.ID), nil, alice)
+		rr := serveHandler(h, req)
+		assertStatus(t, rr.Code, 200)
+
+		var full struct {
+			Meta struct {
+				Sort string `json:"sort"`
+				Dir  string `json:"dir"`
+			} `json:"meta"`
+			Data []Issue `json:"data"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&full); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if full.Meta.Sort != "title" {
+			t.Errorf("sort = %q, want title", full.Meta.Sort)
+		}
+		if full.Meta.Dir != "desc" {
+			t.Errorf("dir = %q, want desc", full.Meta.Dir)
+		}
+		if len(full.Data) >= 2 {
+			if full.Data[0].Title < full.Data[1].Title {
+				t.Error("expected descending order")
+			}
+		}
+	})
+}
+
 func assertStatus(t *testing.T, got, want int) {
 	t.Helper()
 	if got != want {
@@ -678,12 +901,16 @@ func assertStatus(t *testing.T, got, want int) {
 
 func assertErrorBody(t *testing.T, body io.Reader, msg string) {
 	t.Helper()
-	var errResp struct {
-		Error string `json:"error"`
+	var env struct {
+		Meta struct {
+			Error string `json:"error"`
+		} `json:"meta"`
 	}
-	mustDecode(t, body, &errResp)
-	if errResp.Error != msg {
-		t.Errorf("error body = %q, want %q", errResp.Error, msg)
+	if err := json.NewDecoder(body).Decode(&env); err != nil {
+		t.Fatalf("json.Decode: %v", err)
+	}
+	if env.Meta.Error != msg {
+		t.Errorf("error body = %q, want %q", env.Meta.Error, msg)
 	}
 }
 

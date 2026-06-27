@@ -11,7 +11,7 @@ The PAT is passed as a query parameter because some MCP clients cannot set HTTP 
 ```json
 {
   "mcpServers": {
-    "ticketer": {
+    "goard": {
       "type": "http",
       "url": "http://localhost:8300/mcp?pat=pat_admin"
     }

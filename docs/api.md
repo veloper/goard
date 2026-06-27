@@ -2,7 +2,21 @@
 
 Base URL: `http://<host>:<port>/api`
 
-All requests require `Authorization: Bearer <pat>` header. PATs are generated server-side on user creation and are returned in the create response only.
+All requests require `Authorization: Bearer <pat>` header. PATs are generated server-side on user creation and returned in the create response only.
+
+All responses use a standard envelope:
+
+```json
+{"meta": {"status": 200}, "data": { ... }}
+{"meta": {"status": 200}, "data": [ ... ]}
+{"meta": {"status": 404, "error": "not found"}, "data": null}
+```
+
+List endpoints include pagination in meta:
+
+```json
+{"meta": {"status": 200, "page": 1, "per_page": 50, "total": 137}, "data": [...]}
+```
 
 ## Info
 
@@ -10,18 +24,18 @@ All requests require `Authorization: Bearer <pat>` header. PATs are generated se
 GET /api/info
 ```
 
-Returns server metadata. Call this first to discover valid values and see all registered users and projects. Response includes the authenticated user in the `me` field.
+Returns server metadata. Call this first to discover valid values.
 
 ```json
-{
+{"meta": {"status": 200}, "data": {
   "states": ["backlog", "todo", "in_progress", "qa", "done", "cancelled"],
   "types": ["epic", "feature", "bug", "chore"],
   "priority_levels": [0, 1, 2, 3, 4],
   "priority_labels": {"0": "none", "1": "urgent", "2": "high", "3": "medium", "4": "low"},
-  "users": [{"id": 1, "username": "admin", ...}],
-  "projects": [{"id": 1, "name": "Game", "slug": "GAME", ...}],
+  "users": [{"id": 1, "username": "admin"}],
+  "projects": [{"id": 1, "name": "Game", "slug": "GAME"}],
   "me": {"id": 1, "username": "admin", "is_admin": true}
-}
+}}
 ```
 
 ## Users
@@ -30,33 +44,60 @@ Returns server metadata. Call this first to discover valid values and see all re
 
 ```
 GET /api/users
-→ 200 [{"id": 1, "username": "admin", "display_name": "admin", "is_admin": true, ...}]
+```
+
+| Param | Description |
+|-------|-------------|
+| `page` | Page number (default 1) |
+| `per_page` | Results per page (default 50) |
+| `sort` | Sort column: `username`, `is_admin`, `created_at`, `updated_at` |
+| `dir` | Sort direction: `asc` or `desc` (default `asc`) |
+| `filter` | JSON filter (react-querybuilder format) |
+
+All user IDs (`created_by`, `assignee`, `author`) are returned as UserRef objects:
+
+```json
+{"created_by": {"id": 1, "username": "admin"}}
 ```
 
 ### Get user
 
 ```
 GET /api/users/{id}
-→ 200 {"id": 1, "username": "admin", ...}
-→ 404 {"error": "user not found"}
 ```
+
+Returns user without PAT.
 
 ### Create user (admin only)
 
 ```
 POST /api/users
-{"username": "bot", "display_name": "Bot Builder", "admin": false}
-→ 201 {"id": 5, "username": "bot", "display_name": "Bot Builder", "pat": "pat_a1b2c3d4...", "is_admin": false}
+{"username": "bot", "admin": false}
+→ {"meta": {"status": 201}, "data": {"user": {"id": 5, "username": "bot", "is_admin": false}, "pat": "pat_a1b2c3d4..."}}
 ```
 
-The PAT is auto-generated and **only returned on creation**. Store it. `admin: true` makes the user an admin (admin required to create admins).
+The PAT is auto-generated and **only returned on creation**. Store it.
 
-### Update user (admin only)
+### Update user PAT (admin only)
 
 ```
 PATCH /api/users/{id}
-{"display_name": "New Name", "pat": "pat_new"}
-→ 200 {"id": 5, "username": "bot", "display_name": "New Name", ...}
+{"pat": "pat_new"}
+```
+
+### Get user PAT (admin only)
+
+```
+GET /api/users/{id}/pat
+→ {"meta": {"status": 200}, "data": {"pat": "pat_a1b2c3d4..."}}
+```
+
+### Set user PAT (admin only)
+
+```
+PUT /api/users/{id}/pat
+{"pat": "pat_new"}
+→ {"meta": {"status": 200}, "data": {"pat": "pat_new"}}
 ```
 
 ### Delete user (admin only)
@@ -66,11 +107,13 @@ DELETE /api/users/{id}
 → 204
 ```
 
+Deletes the user's comments, issues, projects, then the user. Unassigns them from any assigned issues.
+
 ### Me
 
 ```
 GET /api/me
-→ 200 {"id": 1, "username": "admin", "is_admin": true, ...}
+→ {"meta": {"status": 200}, "data": {"id": 1, "username": "admin", "is_admin": true}}
 ```
 
 Returns the authenticated user based on the PAT in the Authorization header.
@@ -82,7 +125,6 @@ Returns the authenticated user based on the PAT in the Authorization header.
 ```
 POST /api/projects
 {"name": "Asteroid Game", "slug": "ASTEROID-GAME"}
-→ 201 {"id": 1, "name": "Asteroid Game", "slug": "ASTEROID-GAME", "description": "", ...}
 ```
 
 `slug` is used in issue slugs (`ASTEROID-GAME-42`). Must be unique. `description` is optional.
@@ -91,23 +133,29 @@ POST /api/projects
 
 ```
 GET /api/projects
-→ 200 [{"id": 1, "name": "Asteroid Game", "slug": "ASTEROID-GAME", ...}]
 ```
+
+| Param | Description |
+|-------|-------------|
+| `page` | Page number (default 1) |
+| `per_page` | Results per page (default 50) |
+| `sort` | Sort column: `name`, `slug`, `created_at`, `updated_at` |
+| `dir` | Sort direction |
+| `filter` | JSON filter |
 
 ### Get project
 
 ```
 GET /api/projects/{id}
-→ 200 {"id": 1, ...}
-→ 404 {"error": "project not found"}
 ```
+
+Returns project with its issues embedded in the `issues` array.
 
 ### Update project
 
 ```
 PATCH /api/projects/{id}
 {"name": "Asteroid Game v2", "description": "A space game"}
-→ 200 {"id": 1, "name": "Asteroid Game v2", "slug": "ASTEROID-GAME", "description": "A space game", ...}
 ```
 
 Only provided fields change. Empty strings are ignored.
@@ -119,7 +167,7 @@ DELETE /api/projects/{id}
 → 204
 ```
 
-Deletes the project and all its issues permanently.
+Deletes the project, all its issues, and all comments on those issues permanently.
 
 ## Issues
 
@@ -128,7 +176,6 @@ Deletes the project and all its issues permanently.
 ```
 POST /api/projects/{project_id}/issues
 {"title": "Add rotation", "type": "feature", "priority": 2}
-→ 201 {"id": 1, "slug": "ASTEROID-GAME-1", "state": "todo", "title": "Add rotation", "type": "feature", "priority": 2, ...}
 ```
 
 `project_id` can be a numeric ID or a slug. Only `title` is required. Defaults: `state=todo`, `type=feature`, `priority=3`.
@@ -139,17 +186,14 @@ POST /api/projects/{project_id}/issues
 | `description` | string | Issue description |
 | `type` | string | `epic`, `feature`, `bug`, or `chore` |
 | `state` | string | `backlog`, `todo`, `in_progress`, `qa`, `done`, `cancelled` |
-| `assignee` | int | User ID to assign to (0 = unassigned) |
+| `assignee` | int | User ID to assign (0 = unassigned) |
 | `priority` | int | `0`=none, `1`=urgent, `2`=high, `3`=medium, `4`=low |
 
 ### List issues
 
 ```
 GET /api/projects/{project_id}/issues
-→ 200 [{"id": 1, "slug": "ASTEROID-GAME-1", ...}, ...]
 ```
-
-Filters (all optional):
 
 | Param | Example | Description |
 |-------|---------|-------------|
@@ -159,37 +203,35 @@ Filters (all optional):
 | `q` | `?q=login` | Search title and description |
 | `page` | `?page=2` | Page number (default 1) |
 | `per_page` | `?per_page=20` | Items per page (default 50) |
+| `sort` | `?sort=priority` | Sort column: `title`, `slug`, `type`, `state`, `priority`, `created_at`, `updated_at` |
+| `dir` | `?dir=desc` | Sort direction |
+| `filter` | `?filter={"combinator":"and","rules":[...]}` | JSON filter (react-querybuilder format) |
 
 ### Get issue
 
 ```
 GET /api/issues/{id}
-→ 200 {"id": 1, "slug": "ASTEROID-GAME-1", ...}
-→ 404 {"error": "issue not found"}
 ```
 
-`id` can be a numeric ID or a slug (e.g. `ASTEROID-GAME-42`).
+`id` can be a numeric ID or a slug. Returns issue with comments embedded in the `comments` array.
 
 ### Update issue
 
 ```
 PATCH /api/issues/{id}
 {"state": "qa", "assignee": 2}
-→ 200 {"id": 1, "slug": "ASTEROID-GAME-1", "state": "qa", "assignee": 2, ...}
 ```
 
-Only provided fields change. Send `0` to leave priority/assignee unchanged.
+Only provided fields change.
 
 ### Update issue state (shorthand)
 
 ```
 PUT /api/issues/{id}/state
 {"state": "qa"}
-→ 200 {"id": 1, "slug": "ASTEROID-GAME-1", "state": "qa", ...}
-→ 400 {"error": "invalid state"}
 ```
 
-Validates the state against the pipeline before updating. Cleaner than PATCH when you just want to move an issue.
+Validates the state against the pipeline before updating.
 
 ### Delete issue
 
@@ -198,30 +240,35 @@ DELETE /api/issues/{id}
 → 204
 ```
 
+Deletes the issue and all its comments.
+
 ## Comments
 
 ### List comments
 
 ```
 GET /api/issues/{id}/comments
-→ 200 [{"id": 1, "issue_id": 1, "body": "Looking good", "author": 2, ...}]
 ```
 
-Ordered oldest first.
+Ordered by creation date. Supports `page`, `per_page`, `sort`, `dir`, `filter` params.
 
 ### Add comment
 
 ```
 POST /api/issues/{id}/comments
 {"body": "Fixed in commit abc123"}
-→ 201 {"id": 1, "issue_id": 1, "body": "Fixed in commit abc123", "author": 1, ...}
+→ {"meta": {"status": 201}, "data": {"id": 1, "issue_id": 1, "body": "Fixed in commit abc123", "author": {"id": 1, "username": "admin"}, ...}}
 ```
 
 `author` is set from the authenticated user automatically.
 
 ## Errors
 
-All errors return JSON:
+All errors return JSON with the error in `meta.error`:
+
+```json
+{"meta": {"status": 400, "error": "title is required"}, "data": null}
+```
 
 | Status | Meaning |
 |--------|---------|
@@ -229,8 +276,37 @@ All errors return JSON:
 | `401` | Missing or invalid PAT |
 | `403` | Admin-only action attempted by non-admin |
 | `404` | Entity not found |
-| `500` | Server error (usually a database issue) |
+| `409` | Unique constraint violation (duplicate slug, username, or PAT) |
+| `500` | Server error |
+
+## Pagination
+
+All list endpoints support:
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `page` | `1` | Page number |
+| `per_page` | `50` | Items per page |
+| `sort` | _varies_ | Sort column (see endpoint docs) |
+| `dir` | `asc` | Sort direction |
+
+Response includes pagination in `meta`:
 
 ```json
-{"error": "title is required"}
+{"meta": {"status": 200, "page": 1, "per_page": 20, "total": 137, "sort": "priority", "dir": "desc"}, "data": [...]}
 ```
+
+## Filtering
+
+All list endpoints accept a `filter` parameter in [react-querybuilder](https://react-querybuilder.js.org/) JSON format:
+
+```json
+?filter={"combinator":"and","rules":[
+  {"field":"state","operator":"in","value":["todo","in_progress"]},
+  {"field":"priority","operator":"gte","value":2}
+]}
+```
+
+Supported operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`, `like`, `is` (null check).
+
+User-typed fields (`assignee_user_id`, `created_by_user_id`, `author_user_id`) accept numeric user IDs.

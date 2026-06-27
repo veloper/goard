@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"github.com/mark3labs/mcp-go/server"
 	"strconv"
@@ -18,21 +19,52 @@ func NewHandler(store *Store, hub *Hub) *Handler {
 	return &Handler{store: store, hub: hub}
 }
 
+type envelopeMeta struct {
+	Status  int    `json:"status"`
+	Error   string `json:"error,omitempty"`
+	Page    int    `json:"page,omitempty"`
+	PerPage int    `json:"per_page,omitempty"`
+	Total   int    `json:"total,omitempty"`
+	Sort    string `json:"sort,omitempty"`
+	Dir     string `json:"dir,omitempty"`
+}
+
+type envelope struct {
+	Meta envelopeMeta `json:"meta"`
+	Data any          `json:"data"`
+}
+
 func jsonResp(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	json.NewEncoder(w).Encode(envelope{
+		Meta: envelopeMeta{Status: status},
+		Data: v,
+	})
+}
+
+func jsonListResp(w http.ResponseWriter, status int, v any, page, perPage, total int, sort, dir string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(envelope{
+		Meta: envelopeMeta{Status: status, Page: page, PerPage: perPage, Total: total, Sort: sort, Dir: dir},
+		Data: v,
+	})
 }
 
 func jsonErr(w http.ResponseWriter, status int, msg string) {
-	jsonResp(w, status, map[string]string{"error": msg})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(envelope{
+		Meta: envelopeMeta{Status: status, Error: msg},
+		Data: nil,
+	})
 }
 
 // ── Info ──
 
 type infoUser struct {
-	ID          int64  `json:"id"`
-	DisplayName string `json:"display_name"`
+	ID int64 `json:"id"`
 }
 
 type infoProject struct {
@@ -42,12 +74,12 @@ type infoProject struct {
 }
 
 func (h *Handler) Info(w http.ResponseWriter, r *http.Request) {
-	users, _ := h.store.ListUsers()
-	projects, _ := h.store.ListProjects()
+	users, _ := h.store.ListUsers(1, 9999, "", "")
+	projects, _ := h.store.ListProjects(1, 9999, "", "")
 
 	compactUsers := make([]infoUser, 0, len(users))
 	for _, u := range users {
-		compactUsers = append(compactUsers, infoUser{ID: u.ID, DisplayName: u.DisplayName})
+		compactUsers = append(compactUsers, infoUser{ID: u.ID})
 	}
 	compactProjects := make([]infoProject, 0, len(projects))
 	for _, p := range projects {
@@ -70,6 +102,94 @@ func parseInt64(s string) int64 {
 	return n
 }
 
+func parsePageParams(r *http.Request) (page, perPage int) {
+	page, _ = strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ = strconv.Atoi(r.URL.Query().Get("per_page"))
+	if page <= 0 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = 50
+	}
+	return
+}
+
+// allowedSorts defines which column names can appear in ?sort= for each endpoint.
+// The map value is the SQL ORDER BY expression (same as key for simple cases).
+type sortWhitelist map[string]string
+
+var issueSorts = sortWhitelist{
+	"created_at": "created_at", "updated_at": "updated_at",
+	"priority": "priority", "state": "state", "type": "type",
+	"title": "title", "slug": "slug",
+}
+
+var issueFilterFields = AllowedFields{
+	"type": "type", "state": "state",
+	"priority": "priority", "assignee_user_id": "assignee_user_id",
+	"created_by_user_id": "created_by_user_id",
+}
+
+var projectSorts = sortWhitelist{
+	"created_at": "created_at", "updated_at": "updated_at",
+	"name": "name", "slug": "slug",
+}
+
+var projectFilterFields = AllowedFields{
+	"name": "name", "slug": "slug",
+	"created_by_user_id": "created_by_user_id",
+}
+
+var userSorts = sortWhitelist{
+	"created_at": "created_at", "updated_at": "updated_at",
+	"username": "username", "is_admin": "is_admin",
+}
+
+var userFilterFields = AllowedFields{
+	"username": "username", "is_admin": "is_admin",
+}
+
+var commentSorts = sortWhitelist{
+	"created_at": "created_at", "updated_at": "updated_at",
+}
+
+var commentFilterFields = AllowedFields{
+	"author_user_id": "author_user_id",
+	"created_by_user_id": "created_by_user_id",
+}
+
+// parseFilter reads ?filter= as a JSON FilterGroup and compiles it against
+// the given allowed fields. Returns ("", nil) when absent or empty.
+func parseFilter(r *http.Request, allowed AllowedFields) (string, []any) {
+	s := r.URL.Query().Get("filter")
+	if s == "" {
+		return "", nil
+	}
+	fg, err := ParseFilter(s)
+	if err != nil {
+		return "", nil // silently ignore malformed filters
+	}
+	return fg.ToSQL(allowed)
+}
+
+// parseSort validates ?sort= and ?dir= against a whitelist and returns
+// the ORDER BY clause, or empty string for default ordering.
+func parseSort(r *http.Request, allowed sortWhitelist) string {
+	col := r.URL.Query().Get("sort")
+	if col == "" {
+		return ""
+	}
+	expr, ok := allowed[col]
+	if !ok {
+		return ""
+	}
+	dir := r.URL.Query().Get("dir")
+	if dir != "asc" && dir != "desc" {
+		dir = "asc"
+	}
+	return fmt.Sprintf("ORDER BY %s %s", expr, dir)
+}
+
 // ── Users ──
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
@@ -77,12 +197,19 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.store.ListUsers()
+	page, perPage := parsePageParams(r)
+	orderBy := parseSort(r, userSorts)
+	filterClause, filterArgs := parseFilter(r, userFilterFields)
+	users, err := h.store.ListUsers(page, perPage, orderBy, filterClause, filterArgs...)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
-	jsonResp(w, 200, users)
+	total, err := h.store.CountUsers()
+	if err != nil {
+		total = 0
+	}
+	jsonListResp(w, 200, users, page, perPage, total, r.URL.Query().Get("sort"), r.URL.Query().Get("dir"))
 }
 
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +230,6 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var body struct {
 		Username    string `json:"username"`
-		DisplayName string `json:"display_name"`
 		Admin       bool   `json:"admin"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -115,12 +241,12 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pat := generatePAT()
-	user, err := h.store.CreateUser(body.Username, body.DisplayName, pat, body.Admin)
+	user, err := h.store.CreateUser(body.Username, pat, body.Admin)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
-	jsonResp(w, 201, user)
+	jsonResp(w, 201, map[string]any{"user": user, "pat": pat})
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -131,16 +257,15 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	id := parseInt64(r.PathValue("id"))
 	var body struct {
-		DisplayName string `json:"display_name"`
 		PAT         string `json:"pat"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		jsonErr(w, 400, "invalid json")
 		return
 	}
-	user, err := h.store.UpdateUser(id, body.DisplayName, body.PAT)
+	user, err := h.store.UpdateUser(id, body.PAT)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	jsonResp(w, 200, user)
@@ -154,21 +279,66 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	id := parseInt64(r.PathValue("id"))
 	if err := h.store.DeleteUser(id); err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	w.WriteHeader(204)
 }
 
+func (h *Handler) GetUserPAT(w http.ResponseWriter, r *http.Request) {
+	user := UserFromCtx(r.Context())
+	if !user.IsAdmin {
+		jsonErr(w, 403, "admin required")
+		return
+	}
+	id := parseInt64(r.PathValue("id"))
+	user, err := h.store.GetUser(id)
+	if err != nil {
+		jsonErr(w, 404, "user not found")
+		return
+	}
+	jsonResp(w, 200, map[string]string{"pat": user.PAT})
+}
+
+func (h *Handler) SetUserPAT(w http.ResponseWriter, r *http.Request) {
+	user := UserFromCtx(r.Context())
+	if !user.IsAdmin {
+		jsonErr(w, 403, "admin required")
+		return
+	}
+	id := parseInt64(r.PathValue("id"))
+	var body struct {
+		PAT string `json:"pat"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonErr(w, 400, "invalid json")
+		return
+	}
+	if body.PAT == "" {
+		jsonErr(w, 400, "pat is required")
+		return
+	}
+	user, err := h.store.UpdateUser(id, body.PAT)
+	if err != nil {
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
+		return
+	}
+	jsonResp(w, 200, map[string]string{"pat": user.PAT})
+}
+
 // ── Projects ──
 
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.store.ListProjects()
+	page, perPage := parsePageParams(r)
+	orderBy := parseSort(r, projectSorts)
+	filterClause, filterArgs := parseFilter(r, projectFilterFields)
+	projects, err := h.store.ListProjects(page, perPage, orderBy, filterClause, filterArgs...)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
-	jsonResp(w, 200, projects)
+	total, _ := h.store.CountProjects()
+	jsonListResp(w, 200, projects, page, perPage, total, r.URL.Query().Get("sort"), r.URL.Query().Get("dir"))
 }
 
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +358,7 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	user := UserFromCtx(r.Context())
 	p, err := h.store.CreateProject(body.Name, body.Slug, body.Description, user.ID)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventProjectCreated, Payload: p, By: user.ID})
@@ -225,7 +395,7 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	before := *existing
 	p, err := h.store.UpdateProject(id, body.Name, body.Slug, body.Description)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventProjectUpdated,
@@ -238,7 +408,7 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	id := parseInt64(r.PathValue("id"))
 	user := UserFromCtx(r.Context())
 	if err := h.store.DeleteProject(id); err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventProjectDeleted,
@@ -264,29 +434,40 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+	if page <= 0 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = 50
+	}
 
+	orderBy := parseSort(r, issueSorts)
+	filterClause, filterArgs := parseFilter(r, issueFilterFields)
 	f := IssueFilter{
 		Type:      r.URL.Query().Get("type"),
 		State:     r.URL.Query().Get("state"),
-		Assignee:  parseInt64(r.URL.Query().Get("assignee")),
-		CreatedBy: parseInt64(r.URL.Query().Get("created_by")),
+		AssigneeUserID:  parseInt64(r.URL.Query().Get("assignee")),
+		CreatedByUserID: parseInt64(r.URL.Query().Get("created_by")),
 		Query:     r.URL.Query().Get("q"),
 		Page:      page,
 		PerPage:   perPage,
+		OrderBy:   orderBy,
+		FilterClause: filterClause,
+		FilterArgs:   filterArgs,
 	}
 
 	// assigned_to_me convenience
-	if r.URL.Query().Get("assigned_to_me") == "true" && f.Assignee == 0 {
+	if r.URL.Query().Get("assigned_to_me") == "true" && f.AssigneeUserID == 0 {
 		user := UserFromCtx(r.Context())
-		f.Assignee = user.ID
+		f.AssigneeUserID = user.ID
 	}
 
-	issues, err := h.store.ListIssues(projectID, f)
+	issues, total, err := h.store.ListIssues(projectID, f)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
-	jsonResp(w, 200, issues)
+	jsonListResp(w, 200, issues, page, perPage, total, r.URL.Query().Get("sort"), r.URL.Query().Get("dir"))
 }
 
 func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +491,7 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	user := UserFromCtx(r.Context())
 	iss, err := h.store.CreateIssue(projectID, body.Title, body.Description, body.Type, body.State, body.Assignee, 0, user.ID, body.Priority)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventIssueCreated, Payload: iss, By: user.ID})
@@ -337,20 +518,20 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	user := UserFromCtx(r.Context())
 	before := *iss
 	var body struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Type        string `json:"type"`
-		State       string `json:"state"`
-		Assignee    int64  `json:"assignee"`
-		Priority    int    `json:"priority"`
+		Title       string  `json:"title"`
+		Description string  `json:"description"`
+		Type        string  `json:"type"`
+		State       string  `json:"state"`
+		Assignee    *int64  `json:"assignee"`
+		Priority    *int    `json:"priority"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		jsonErr(w, 400, "invalid json")
 		return
 	}
-	iss, err = h.store.UpdateIssue(iss.ID, body.Title, body.Description, body.Type, body.State, body.Assignee, 0, body.Priority)
+	iss, err = h.store.UpdateIssue(iss.ID, body.Title, body.Description, body.Type, body.State, body.Assignee, nil, body.Priority)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventIssueUpdated,
@@ -390,9 +571,9 @@ func (h *Handler) UpdateIssueState(w http.ResponseWriter, r *http.Request) {
 	}
 	user := UserFromCtx(r.Context())
 	before := *iss
-	iss, err = h.store.UpdateIssue(iss.ID, "", "", "", body.State, 0, 0, 0)
+	iss, err = h.store.UpdateIssue(iss.ID, "", "", "", body.State, nil, nil, nil)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventIssueUpdated,
@@ -410,7 +591,7 @@ func (h *Handler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	user := UserFromCtx(r.Context())
 	if err := h.store.DeleteIssue(iss.ID); err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventIssueDeleted,
@@ -428,9 +609,12 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, 404, "issue not found")
 		return
 	}
-	comments, err := h.store.ListComments(iss.ID)
+	page, perPage := parsePageParams(r)
+	orderBy := parseSort(r, commentSorts)
+	filterClause, filterArgs := parseFilter(r, commentFilterFields)
+	comments, err := h.store.ListComments(iss.ID, page, perPage, orderBy, filterClause, filterArgs...)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	jsonResp(w, 200, comments)
@@ -457,7 +641,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	user := UserFromCtx(r.Context())
 	c, err := h.store.CreateComment(iss.ID, body.Body, user.ID, user.ID)
 	if err != nil {
-		jsonErr(w, 500, err.Error())
+		errMsg, errStatus := cleanErrStatus(err); jsonErr(w, errStatus, errMsg)
 		return
 	}
 	h.hub.Broadcast(Event{Type: EventCommentCreated, Payload: c, By: user.ID})

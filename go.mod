@@ -1,4 +1,4 @@
-module github.com/daniel/roomy-ticketer
+module github.com/veloper/goard
 
 go 1.25.5
 

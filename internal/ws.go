@@ -91,7 +91,10 @@ func (h *Hub) Run() {
 // Broadcast enqueues a message to every connected client except the one
 // whose userID matches event.By (the acting user).
 func (h *Hub) Broadcast(event Event) {
-	data, err := json.Marshal(event)
+	data, err := json.Marshal(envelope{
+		Meta: envelopeMeta{Status: 200},
+		Data: event,
+	})
 	if err != nil {
 		return
 	}
@@ -203,8 +206,8 @@ func diffIssue(before, after *Issue) map[string]any {
 	if before.State != after.State {
 		changed["state"] = diff("before", before.State, after.State)
 	}
-	if before.Assignee != after.Assignee {
-		changed["assignee"] = diff("before", nullableInt(before.Assignee), nullableInt(after.Assignee))
+	if before.AssigneeUserID != after.AssigneeUserID {
+		changed["assignee"] = diff("before", nullableInt(before.AssigneeUserID), nullableInt(after.AssigneeUserID))
 	}
 	if before.Priority != after.Priority {
 		changed["priority"] = diff("before", before.Priority, after.Priority)

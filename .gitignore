@@ -1,5 +1,5 @@
-ticketer
+goard
 *.db
 *.db-*
 .DS_Store
-tktrctl
+goardctl

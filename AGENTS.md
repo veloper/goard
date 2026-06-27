@@ -1,15 +1,15 @@
-# Ticketer — Agent Guide
+# Goard — Agent Guide
 
-This document is for AI agents interacting with Ticketer. It covers everything you need to know: how the project works, how to configure it, and how to control it programmatically.
+This document is for AI agents interacting with Goard. It covers everything you need to know: how the project works, how to configure it, and how to control it programmatically.
 
 ## Quick Overview
 
-Ticketer is a project/issue tracker built as a single Go binary. It stores everything in SQLite and exposes four ways to interact:
+Goard is a project/issue tracker built as a single Go binary. It stores everything in SQLite and exposes four ways to interact:
 
 - **REST API** — standard CRUD for projects, issues, comments, users
 - **MCP Server** — a Model Context Protocol endpoint for LLM tool use
 - **WebSocket** — real-time change broadcasts
-- **CLI (`tktrctl`)** — scripting and bootstrapping
+- **CLI (`goardctl`)** — scripting and bootstrapping
 
 All IDs are auto-increment integers. Issues have human-readable slugs like `ASTEROID-GAME-42`.
 
@@ -19,16 +19,16 @@ Required env vars on startup:
 
 | Env var | Description |
 |---------|-------------|
-| `TICKETER_ADMIN_USERNAME` | Admin username |
-| `TICKETER_ADMIN_PAT` | Admin personal access token |
+| `GOARD_ADMIN_USERNAME` | Admin username |
+| `GOARD_ADMIN_PAT` | Admin personal access token |
 
 Optional:
 
 | Env var | Default | Description |
 |---------|---------|-------------|
-| `TICKETER_HOST` | `""` | Listen host (all interfaces) |
-| `TICKETER_PORT` | `"8300"` | Listen port |
-| `TICKETER_DB_PATH` | `"ticketer.db"` | SQLite database path |
+| `GOARD_HOST` | `""` | Listen host (all interfaces) |
+| `GOARD_PORT` | `"8300"` | Listen port |
+| `GOARD_DB_PATH` | `"goard.db"` | SQLite database path |
 
 The admin user is created on startup. Use those credentials to create additional users via the API or CLI.
 
@@ -71,9 +71,9 @@ All API and MCP requests require a Personal Access Token (PAT). The PAT is set a
 - **REST API**: `Authorization: Bearer <pat>` header
 - **MCP Server**: `?pat=<pat>` query parameter on the endpoint URL
 - **Web UI**: Login form at `/login`
-- **CLI**: `TICKETER_PAT` environment variable
+- **CLI**: `GOARD_PAT` environment variable
 
-The admin user is configured via `TICKETER_ADMIN_USERNAME` / `TICKETER_ADMIN_PAT`. Additional users can be created via `POST /api/users` (admin only).
+The admin user is configured via `GOARD_ADMIN_USERNAME` / `GOARD_ADMIN_PAT`. Additional users can be created via `POST /api/users` (admin only).
 
 ## REST API
 
@@ -93,8 +93,8 @@ GET    /api/me               Get current user
 Create user example:
 ```json
 POST /api/users
-{"username": "bot", "display_name": "Bot Builder", "admin": false}
-→ {"id": 5, "username": "bot", "pat": "pat_a1b2c3d4...", "is_admin": false}
+{"username": "bot", "admin": false}
+→ {"meta": {"status": 201}, "data": {"user": {"id": 5, "username": "bot", "is_admin": false}, "pat": "pat_a1b2c3d4..."}}
 ```
 
 The PAT is generated server-side and returned only on creation.
@@ -195,7 +195,7 @@ All tools accept `project_id` and `id` as either numeric IDs or slugs (e.g. `AST
 ```json
 {
   "mcpServers": {
-    "ticketer": {
+    "goard": {
       "type": "http",
       "url": "http://localhost:8300/mcp?pat=pat_admin"
     }
@@ -203,35 +203,35 @@ All tools accept `project_id` and `id` as either numeric IDs or slugs (e.g. `AST
 }
 ```
 
-## CLI (tktrctl)
+## CLI (goardctl)
 
-The `tktrctl` binary is included in the Docker image. Configure via environment variables:
+The `goardctl` binary is included in the Docker image. Configure via environment variables:
 
 ```bash
-export TICKETER_HOST=http://localhost:8300
-export TICKETER_PAT=pat_admin
+export GOARD_HOST=http://localhost:8300
+export GOARD_PAT=pat_admin
 ```
 
 ### Commands
 
 ```
-tktrctl info                          # Server metadata
-tktrctl users list                    # List users
-tktrctl users show <id>               # Get user
-tktrctl users create <username>       # Create user (--display-name, --admin)
-tktrctl users update <id>             # Update user (--display-name, --pat)
-tktrctl users delete <id>             # Delete user
-tktrctl projects list                 # List projects
-tktrctl projects show <id>            # Get project
-tktrctl projects create <name> <slug> # Create project (--description)
-tktrctl projects update <id>          # Update project (--name, --slug, --description)
-tktrctl projects delete <id>          # Delete project
-tktrctl issues list <project>         # List issues (--state, --assignee)
-tktrctl issues show <id>              # Get issue
-tktrctl issues create <project> <title> # Create issue (--type, --state, --priority, --assignee)
-tktrctl issues update <id>            # Update issue (--title, --state, --type, --priority, --assignee)
-tktrctl issues state <id>             # Show current state
-tktrctl issues state-update <id> <state>  # Update state
+goardctl info                          # Server metadata
+goardctl users list                    # List users
+goardctl users show <id>               # Get user
+goardctl users create <username>       # Create user (--admin)
+goardctl users update <id>             # Update user (--pat)
+goardctl users delete <id>             # Delete user
+goardctl projects list                 # List projects
+goardctl projects show <id>            # Get project
+goardctl projects create <name> <slug> # Create project (--description)
+goardctl projects update <id>          # Update project (--name, --slug, --description)
+goardctl projects delete <id>          # Delete project
+goardctl issues list <project>         # List issues (--state, --assignee)
+goardctl issues show <id>              # Get issue
+goardctl issues create <project> <title> # Create issue (--type, --state, --priority, --assignee)
+goardctl issues update <id>            # Update issue (--title, --state, --type, --priority, --assignee)
+goardctl issues state <id>             # Show current state
+goardctl issues state-update <id> <state>  # Update state
 ```
 
 Projects and issues can be referenced by numeric ID or slug.
@@ -275,40 +275,40 @@ Only changed fields are included in update events. Create events include the ful
 
 ```bash
 # Build
-docker build -t ticketer .
+docker build -t goard .
 
 # Run
 docker run -p 8300:8300 \
-  -e TICKETER_ADMIN_USERNAME=admin \
-  -e TICKETER_ADMIN_PAT=pat_admin \
-  ticketer
+  -e GOARD_ADMIN_USERNAME=admin \
+  -e GOARD_ADMIN_PAT=pat_admin \
+  goard
 ```
 
-The Docker image includes both `ticketer` and `tktrctl` binaries. The database defaults to `/data/ticketer.db`.
+The Docker image includes both `goard` and `goardctl` binaries. The database defaults to `/data/goard.db`.
 
 ### Docker Compose
 
 ```yaml
 services:
-  ticketer:
+  goard:
     build: .
     ports:
       - "8300:8300"
     environment:
-      TICKETER_ADMIN_USERNAME: admin
-      TICKETER_ADMIN_PAT: pat_admin
+      GOARD_ADMIN_USERNAME: admin
+      GOARD_ADMIN_PAT: pat_admin
     volumes:
-      - ticketer-data:/data
+      - goard-data:/data
 
 volumes:
-  ticketer-data:
+  goard-data:
 ```
 
-### Running tktrctl in Compose
+### Running goardctl in Compose
 
 ```bash
 # One-off commands
-docker compose exec ticketer tktrctl projects create "Game" GAME
+docker compose exec goard goardctl projects create "Game" GAME
 
 # Interactive setup service
 docker compose --profile setup run setup
@@ -318,7 +318,7 @@ docker compose --profile setup run setup
 
 ### Starting fresh
 
-1. Set `TICKETER_ADMIN_USERNAME` and `TICKETER_ADMIN_PAT`
+1. Set `GOARD_ADMIN_USERNAME` and `GOARD_ADMIN_PAT`
 2. Start the server
 3. Call `GET /api/info` to verify connectivity and see server state
 4. Create users via `POST /api/users` (as admin)
@@ -341,7 +341,7 @@ Issues with slug `ASTEROID-GAME-42` can be accessed via:
 - `GET /api/issues/ASTEROID-GAME-42` (slug)
 - `GET /api/issues/42` (numeric ID)
 - `PUT /api/issues/ASTEROID-GAME-42/state` (state endpoint with slug)
-- `tktrctl issues show ASTEROID-GAME-42`
+- `goardctl issues show ASTEROID-GAME-42`
 
 ### Quick reference for valid values
 

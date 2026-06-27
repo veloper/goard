@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -21,7 +22,7 @@ func TestSeedUsers_idempotent(t *testing.T) {
 	if err := s.SeedUsers(testUsers); err != nil {
 		t.Fatalf("SeedUsers (second): %v", err)
 	}
-	users, _ := s.ListUsers()
+	users, _ := s.ListUsers(1, 50, "", "")
 	if len(users) != len(testUsers) {
 		t.Errorf("expected %d users after re-seed, got %d", len(testUsers), len(users))
 	}
@@ -50,7 +51,7 @@ func TestGetUserByPAT_invalid(t *testing.T) {
 
 func TestListUsers(t *testing.T) {
 	s := newTestStore(t)
-	users, err := s.ListUsers()
+	users, err := s.ListUsers(1, 50, "", "")
 	if err != nil {
 		t.Fatalf("ListUsers: %v", err)
 	}
@@ -98,8 +99,8 @@ func TestCreateProject(t *testing.T) {
 	if p.Name != "Test Project" {
 		t.Errorf("expected name %q, got %q", "Test Project", p.Name)
 	}
-	if p.CreatedBy != alice.ID {
-		t.Errorf("expected created_by %q, got %q", alice.ID, p.CreatedBy)
+	if p.CreatedBy.ID != alice.ID {
+		t.Errorf("expected created_by.id %d, got %d", alice.ID, p.CreatedBy.ID)
 	}
 	if p.ID == 0 {
 		t.Error("expected non-empty id")
@@ -196,7 +197,7 @@ func TestCreateIssue_slugFromProjectSlug(t *testing.T) {
 
 func TestListProjects_empty(t *testing.T) {
 	s := newTestStore(t)
-	projects, err := s.ListProjects()
+	projects, err := s.ListProjects(1, 50, "", "")
 	if err != nil {
 		t.Fatalf("ListProjects: %v", err)
 	}
@@ -212,7 +213,7 @@ func TestListProjects_order(t *testing.T) {
 	s.CreateProject("First", "", "", alice.ID)
 	s.CreateProject("Second", "", "", alice.ID)
 
-	projects, _ := s.ListProjects()
+	projects, _ := s.ListProjects(1, 50, "", "")
 	if len(projects) != 2 {
 		t.Fatalf("expected 2 projects, got %d", len(projects))
 	}
@@ -351,8 +352,8 @@ func TestCreateIssue_defaults(t *testing.T) {
 	if iss.Priority != 0 {
 		t.Errorf("expected default priority 0, got %d", iss.Priority)
 	}
-	if iss.Assignee != 0 {
-		t.Errorf("expected empty assignee, got %d", iss.Assignee)
+	if iss.Assignee != nil {
+		t.Errorf("expected nil assignee, got %v", iss.Assignee)
 	}
 }
 
@@ -390,7 +391,7 @@ func TestListIssues_empty(t *testing.T) {
 	alice := getUserByPAT(t, s, "pat_alice")
 	p, _ := s.CreateProject("Empty", "", "", alice.ID)
 
-	issues, err := s.ListIssues(p.ID, IssueFilter{})
+	issues, _, err := s.ListIssues(p.ID, IssueFilter{})
 	if err != nil {
 		t.Fatalf("ListIssues: %v", err)
 	}
@@ -408,17 +409,17 @@ func TestListIssues_filterByState(t *testing.T) {
 	s.CreateIssue(p.ID, "Two", "", "", "qa", 0, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Three", "", "", "todo", 0, 0, alice.ID, 0)
 
-	issues, _ := s.ListIssues(p.ID, IssueFilter{State: "todo"})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{State: "todo"})
 	if len(issues) != 2 {
 		t.Errorf("expected 2 todo issues, got %d", len(issues))
 	}
 
-	issues, _ = s.ListIssues(p.ID, IssueFilter{State: "qa"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{State: "qa"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 review issue, got %d", len(issues))
 	}
 
-	issues, _ = s.ListIssues(p.ID, IssueFilter{State: "done"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{State: "done"})
 	if len(issues) != 0 {
 		t.Errorf("expected 0 done issues, got %d", len(issues))
 	}
@@ -433,12 +434,12 @@ func TestListIssues_filterByAssignee(t *testing.T) {
 	s.CreateIssue(p.ID, "Alice's", "", "", "", alice.ID, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Bob's", "", "", "", bob.ID, 0, bob.ID, 0)
 
-	issues, _ := s.ListIssues(p.ID, IssueFilter{Assignee: alice.ID})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{AssigneeUserID: alice.ID})
 	if len(issues) != 1 || issues[0].Title != "Alice's" {
 		t.Errorf("expected 1 issue assigned to alice, got %d", len(issues))
 	}
 
-	issues, _ = s.ListIssues(p.ID, IssueFilter{Assignee: bob.ID})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{AssigneeUserID: bob.ID})
 	if len(issues) != 1 || issues[0].Title != "Bob's" {
 		t.Errorf("expected 1 issue assigned to bob, got %d", len(issues))
 	}
@@ -453,15 +454,15 @@ func TestListIssues_filterByType(t *testing.T) {
 	s.CreateIssue(p.ID, "Feature request", "", "feature", "", 0, 0, alice.ID, 0)
 	s.CreateIssue(p.ID, "Chore task", "", "chore", "", 0, 0, alice.ID, 0)
 
-	issues, _ := s.ListIssues(p.ID, IssueFilter{Type: "bug"})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{Type: "bug"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 bug, got %d", len(issues))
 	}
-	issues, _ = s.ListIssues(p.ID, IssueFilter{Type: "feature"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Type: "feature"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 feature, got %d", len(issues))
 	}
-	issues, _ = s.ListIssues(p.ID, IssueFilter{Type: "epic"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Type: "epic"})
 	if len(issues) != 0 {
 		t.Errorf("expected 0 epics, got %d", len(issues))
 	}
@@ -477,19 +478,19 @@ func TestListIssues_searchQuery(t *testing.T) {
 	s.CreateIssue(p.ID, "Logout", "", "", "", 0, 0, alice.ID, 0)
 
 	// Match in title
-	issues, _ := s.ListIssues(p.ID, IssueFilter{Query: "login"})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{Query: "login"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 for 'login', got %d", len(issues))
 	}
 
 	// Match in description
-	issues, _ = s.ListIssues(p.ID, IssueFilter{Query: "authentication"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Query: "authentication"})
 	if len(issues) != 1 {
 		t.Errorf("expected 1 for 'authentication', got %d", len(issues))
 	}
 
 	// Matches "Login page" (title) and "Main overview page" (description)
-	issues, _ = s.ListIssues(p.ID, IssueFilter{Query: "PAGE"})
+	issues, _, _ = s.ListIssues(p.ID, IssueFilter{Query: "PAGE"})
 	if len(issues) != 2 {
 		t.Errorf("expected 2 for 'PAGE' (title + desc match), got %d", len(issues))
 	}
@@ -506,23 +507,23 @@ func TestListIssues_pagination(t *testing.T) {
 	_ = alice
 
 	// Page 1 with 3 per page
-	page1, _ := s.ListIssues(p.ID, IssueFilter{Page: 1, PerPage: 3})
+	page1, _, _ := s.ListIssues(p.ID, IssueFilter{Page: 1, PerPage: 3})
 	if len(page1) != 3 {
 		t.Errorf("expected 3 on page 1, got %d", len(page1))
 	}
 
-	page2, _ := s.ListIssues(p.ID, IssueFilter{Page: 2, PerPage: 3})
+	page2, _, _ := s.ListIssues(p.ID, IssueFilter{Page: 2, PerPage: 3})
 	if len(page2) != 3 {
 		t.Errorf("expected 3 on page 2, got %d", len(page2))
 	}
 
-	page3, _ := s.ListIssues(p.ID, IssueFilter{Page: 3, PerPage: 3})
+	page3, _, _ := s.ListIssues(p.ID, IssueFilter{Page: 3, PerPage: 3})
 	if len(page3) != 1 {
 		t.Errorf("expected 1 on page 3, got %d", len(page3))
 	}
 
 	// Page beyond results
-	page4, _ := s.ListIssues(p.ID, IssueFilter{Page: 4, PerPage: 3})
+	page4, _, _ := s.ListIssues(p.ID, IssueFilter{Page: 4, PerPage: 3})
 	if len(page4) != 0 {
 		t.Errorf("expected 0 on page 4, got %d", len(page4))
 	}
@@ -538,7 +539,7 @@ func TestListIssues_defaultPerPage(t *testing.T) {
 		s.CreateIssue(p.ID, "Issue", "", "", "", 0, 0, alice.ID, 0)
 	}
 
-	issues, _ := s.ListIssues(p.ID, IssueFilter{})
+	issues, _, _ := s.ListIssues(p.ID, IssueFilter{})
 	if len(issues) != 50 {
 		t.Errorf("expected default per_page 50, got %d", len(issues))
 	}
@@ -582,7 +583,7 @@ func TestUpdateIssue_state(t *testing.T) {
 	p, _ := s.CreateProject("Flow", "", "", alice.ID)
 	iss, _ := s.CreateIssue(p.ID, "Task", "", "", "todo", 0, 0, alice.ID, 0)
 
-	updated, err := s.UpdateIssue(iss.ID, "", "", "", "done", 0, 0, 0)
+	updated, err := s.UpdateIssue(iss.ID, "", "", "", "done", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("UpdateIssue: %v", err)
 	}
@@ -604,7 +605,8 @@ func TestUpdateIssue_multipleFields(t *testing.T) {
 	p, _ := s.CreateProject("Update", "", "", alice.ID)
 	iss, _ := s.CreateIssue(p.ID, "Old title", "old desc", "bug", "backlog", alice.ID, 0, alice.ID, 4)
 
-	updated, err := s.UpdateIssue(iss.ID, "New title", "new desc", "feature", "in_progress", bob.ID, 0, 2)
+	two := 2
+	updated, err := s.UpdateIssue(iss.ID, "New title", "new desc", "feature", "in_progress", &bob.ID, nil, &two)
 	if err != nil {
 		t.Fatalf("UpdateIssue: %v", err)
 	}
@@ -620,8 +622,8 @@ func TestUpdateIssue_multipleFields(t *testing.T) {
 	if updated.State != "in_progress" {
 		t.Errorf("state = %s, want in_progress", updated.State)
 	}
-	if updated.Assignee != bob.ID {
-		t.Errorf("assignee = %d, want %d", updated.Assignee, bob.ID)
+	if updated.Assignee.ID != bob.ID {
+		t.Errorf("assignee.id = %d, want %d", updated.Assignee.ID, bob.ID)
 	}
 	if updated.Priority != 2 {
 		t.Errorf("priority = %d, want 2", updated.Priority)
@@ -635,7 +637,7 @@ func TestUpdateIssue_partial(t *testing.T) {
 	iss, _ := s.CreateIssue(p.ID, "Orig", "orig desc", "bug", "backlog", alice.ID, 0, alice.ID, 4)
 
 	// Only change title and state
-	updated, err := s.UpdateIssue(iss.ID, "New title", "", "", "qa", 0, 0, 0)
+	updated, err := s.UpdateIssue(iss.ID, "New title", "", "", "qa", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("UpdateIssue: %v", err)
 	}
@@ -658,7 +660,7 @@ func TestUpdateIssue_partial(t *testing.T) {
 
 func TestUpdateIssue_notFound(t *testing.T) {
 	s := newTestStore(t)
-	_, err := s.UpdateIssue(999, "title", "", "", "", 0, 0, 0)
+	_, err := s.UpdateIssue(999, "title", "", "", "", nil, nil, nil)
 	if err == nil {
 		t.Error("expected error for nonexistent issue")
 	}
@@ -697,8 +699,8 @@ func TestCreateComment(t *testing.T) {
 	if c.IssueID != iss.ID {
 		t.Errorf("expected issue_id %q, got %q", iss.ID, c.IssueID)
 	}
-	if c.Author != alice.ID {
-		t.Errorf("expected author %q, got %q", alice.ID, c.Author)
+	if c.Author.ID != alice.ID {
+		t.Errorf("expected author.id %d, got %d", alice.ID, c.Author.ID)
 	}
 }
 
@@ -708,7 +710,7 @@ func TestListComments_empty(t *testing.T) {
 	p, _ := s.CreateProject("Empty", "", "", alice.ID)
 	iss, _ := s.CreateIssue(p.ID, "No comments", "", "", "", 0, 0, alice.ID, 0)
 
-	comments, err := s.ListComments(iss.ID)
+	comments, err := s.ListComments(iss.ID, 1, 50, "", "")
 	if err != nil {
 		t.Fatalf("ListComments: %v", err)
 	}
@@ -727,7 +729,7 @@ func TestListComments_order(t *testing.T) {
 	s.CreateComment(iss.ID, "Second", alice.ID, alice.ID)
 	s.CreateComment(iss.ID, "Third", alice.ID, alice.ID)
 
-	comments, _ := s.ListComments(iss.ID)
+	comments, _ := s.ListComments(iss.ID, 1, 50, "", "")
 	if len(comments) != 3 {
 		t.Fatalf("expected 3 comments, got %d", len(comments))
 	}
@@ -746,13 +748,218 @@ func TestListComments_otherIssue(t *testing.T) {
 	s.CreateComment(iss1.ID, "On issue one", alice.ID, alice.ID)
 	s.CreateComment(iss2.ID, "On issue two", alice.ID, alice.ID)
 
-	c1, _ := s.ListComments(iss1.ID)
+	c1, _ := s.ListComments(iss1.ID, 1, 50, "", "")
 	if len(c1) != 1 || c1[0].Body != "On issue one" {
 		t.Errorf("expected 1 comment on issue 1, got %d", len(c1))
 	}
 }
 
 // ── Slugify ──
+
+func TestListIssues_paginationAndSort(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	p, _ := s.CreateProject("PaginationTest", "", "", alice.ID)
+	for i := 0; i < 10; i++ {
+		title := fmt.Sprintf("Issue %02d", i)
+		s.CreateIssue(p.ID, title, "", "feature", "", 0, 0, alice.ID, 0)
+	}
+
+	t.Run("pagination", func(t *testing.T) {
+		page1, total, err := s.ListIssues(p.ID, IssueFilter{Page: 1, PerPage: 3})
+		if err != nil {
+			t.Fatalf("ListIssues page 1: %v", err)
+		}
+		if len(page1) != 3 {
+			t.Errorf("expected 3 on page 1, got %d", len(page1))
+		}
+		if total != 10 {
+			t.Errorf("expected total 10, got %d", total)
+		}
+
+		page2, _, _ := s.ListIssues(p.ID, IssueFilter{Page: 3, PerPage: 4})
+		if len(page2) != 2 {
+			t.Errorf("expected 2 on page 3 (per_page 4), got %d", len(page2))
+		}
+	})
+
+	t.Run("sort", func(t *testing.T) {
+		asc, _, _ := s.ListIssues(p.ID, IssueFilter{OrderBy: "ORDER BY title ASC"})
+		desc, _, _ := s.ListIssues(p.ID, IssueFilter{OrderBy: "ORDER BY title DESC"})
+
+		if len(asc) < 2 {
+			t.Fatal("need at least 2 issues for sort test")
+		}
+		if asc[0].Title >= asc[1].Title {
+			t.Error("expected ascending order by title")
+		}
+		if desc[0].Title <= desc[1].Title {
+			t.Error("expected descending order by title")
+		}
+	})
+}
+
+func TestListUsers_paginationAndSort(t *testing.T) {
+	s := newTestStore(t)
+	users, err := s.ListUsers(1, 2, "", "")
+	if err != nil {
+		t.Fatalf("ListUsers: %v", err)
+	}
+	if len(users) != 2 {
+		t.Errorf("expected 2 users on page 1 per_page 2, got %d", len(users))
+	}
+	total, _ := s.CountUsers()
+	if total != 3 {
+		t.Errorf("expected total 3 (alice, bob, carol), got %d", total)
+	}
+}
+
+func TestListProjects_paginationAndSort(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	for i := 0; i < 5; i++ {
+		s.CreateProject(fmt.Sprintf("Proj %d", i), "", "", alice.ID)
+	}
+
+	sorted, err := s.ListProjects(1, 50, "ORDER BY name ASC", "")
+	if err != nil {
+		t.Fatalf("ListProjects: %v", err)
+	}
+	if len(sorted) < 2 {
+		t.Fatal("need at least 2 projects")
+	}
+	if sorted[0].Name >= sorted[1].Name {
+		t.Error("expected ascending order by name")
+	}
+}
+
+func TestCreateUser_and_DeleteUser(t *testing.T) {
+	s := newTestStore(t)
+
+	u, err := s.CreateUser("newuser", "pat_newuser", false)
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	if u.Username != "newuser" {
+		t.Errorf("username = %q, want %q", u.Username, "newuser")
+	}
+	if u.PAT != "pat_newuser" {
+		t.Errorf("pat = %q, want %q", u.PAT, "pat_newuser")
+	}
+	if u.ID == 0 {
+		t.Error("expected non-zero ID")
+	}
+
+	// Delete works
+	if err := s.DeleteUser(u.ID); err != nil {
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	_, err = s.GetUser(u.ID)
+	if err == nil {
+		t.Error("expected error for deleted user")
+	}
+}
+
+func TestUpdateUser_PAT(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+
+	updated, err := s.UpdateUser(alice.ID, "pat_new_alice")
+	if err != nil {
+		t.Fatalf("UpdateUser: %v", err)
+	}
+	if updated.PAT != "pat_new_alice" {
+		t.Errorf("PAT = %q, want %q", updated.PAT, "pat_new_alice")
+	}
+
+	// Verify it persists
+	u, err := s.GetUser(alice.ID)
+	if err != nil {
+		t.Fatalf("GetUser after update: %v", err)
+	}
+	if u.PAT != "pat_new_alice" {
+		t.Errorf("persisted PAT = %q, want %q", u.PAT, "pat_new_alice")
+	}
+
+	// Old PAT no longer works
+	_, err = s.GetUserByPAT("pat_alice")
+	if err == nil {
+		t.Error("old PAT should be invalid")
+	}
+}
+
+func TestGetIssueBySlug(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	p, _ := s.CreateProject("Test", "TEST", "", alice.ID)
+	iss, err := s.CreateIssue(p.ID, "My Issue", "", "feature", "", 0, 0, alice.ID, 0)
+	if err != nil {
+		t.Fatalf("CreateIssue: %v", err)
+	}
+
+	got, err := s.GetIssueBySlug(iss.Slug)
+	if err != nil {
+		t.Fatalf("GetIssueBySlug: %v", err)
+	}
+	if got.ID != iss.ID {
+		t.Errorf("id = %d, want %d", got.ID, iss.ID)
+	}
+	if got.Title != "My Issue" {
+		t.Errorf("title = %q, want %q", got.Title, "My Issue")
+	}
+}
+
+func TestGetIssueBySlug_notFound(t *testing.T) {
+	s := newTestStore(t)
+	_, err := s.GetIssueBySlug("NONEXISTENT-42")
+	if err == nil {
+		t.Error("expected error for nonexistent slug")
+	}
+}
+
+func TestCountProjects(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+
+	n, err := s.CountProjects()
+	if err != nil {
+		t.Fatalf("CountProjects: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("expected 0 projects, got %d", n)
+	}
+
+	s.CreateProject("P1", "", "", alice.ID)
+	s.CreateProject("P2", "", "", alice.ID)
+
+	n, _ = s.CountProjects()
+	if n != 2 {
+		t.Errorf("expected 2 projects, got %d", n)
+	}
+}
+
+func TestCountComments(t *testing.T) {
+	s := newTestStore(t)
+	alice := getUserByPAT(t, s, "pat_alice")
+	p, _ := s.CreateProject("Test", "", "", alice.ID)
+	iss, _ := s.CreateIssue(p.ID, "Iss", "", "", "", 0, 0, alice.ID, 0)
+
+	n, err := s.CountComments(iss.ID)
+	if err != nil {
+		t.Fatalf("CountComments: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("expected 0 comments, got %d", n)
+	}
+
+	s.CreateComment(iss.ID, "A comment", alice.ID, alice.ID)
+	s.CreateComment(iss.ID, "Another", alice.ID, alice.ID)
+
+	n, _ = s.CountComments(iss.ID)
+	if n != 2 {
+		t.Errorf("expected 2 comments, got %d", n)
+	}
+}
 
 func TestSlugify(t *testing.T) {
 	tests := []struct {

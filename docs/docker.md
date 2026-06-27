@@ -3,11 +3,11 @@
 ## Quick Start
 
 ```bash
-docker pull veloper/ticketer
+docker pull veloper/goard
 docker run -p 8300:8300 \
-  -e TICKETER_ADMIN_USERNAME=admin \
-  -e TICKETER_ADMIN_PAT=pat_admin \
-  veloper/ticketer
+  -e GOARD_ADMIN_USERNAME=admin \
+  -e GOARD_ADMIN_PAT=pat_admin \
+  veloper/goard
 ```
 
 Open http://localhost:8300/login and sign in.
@@ -15,42 +15,42 @@ Open http://localhost:8300/login and sign in.
 ## Build from Source
 
 ```bash
-docker build -t ticketer .
+docker build -t goard .
 ```
 
-The Dockerfile builds both `ticketer` and `tktrctl` binaries in a multi-stage build. The final image is Alpine-based and includes both binaries.
+The Dockerfile builds both `goard` and `goardctl` binaries in a multi-stage build. The final image is Alpine-based and includes both binaries.
 
 ## Docker Compose
 
 ```yaml
 services:
-  ticketer:
-    image: veloper/ticketer
+  goard:
+    image: veloper/goard
     ports:
       - "8300:8300"
     environment:
-      TICKETER_ADMIN_USERNAME: admin
-      TICKETER_ADMIN_PAT: pat_admin
+      GOARD_ADMIN_USERNAME: admin
+      GOARD_ADMIN_PAT: pat_admin
     volumes:
-      - ticketer-data:/data
+      - goard-data:/data
 
 volumes:
-  ticketer-data:
+  goard-data:
 ```
 
-The database persists in the `ticketer-data` volume at `/data/ticketer.db` (set via `ENV TICKETER_DB_PATH` in the Dockerfile).
+The database persists in the `goard-data` volume at `/data/goard.db` (set via `ENV GOARD_DB_PATH` in the Dockerfile).
 
-## Using tktrctl
+## Using goardctl
 
-The Docker image includes `tktrctl` — use it for scripting and automation:
+The Docker image includes `goardctl` — use it for scripting and automation:
 
 ```bash
 # One-off commands against a running container
-docker compose exec ticketer \
-  tktrctl projects create "Game" GAME
+docker compose exec goard \
+  goardctl projects create "Game" GAME
 
-docker compose exec ticketer \
-  tktrctl issues create GAME "Fix login" --type bug --priority 1
+docker compose exec goard \
+  goardctl issues create GAME "Fix login" --type bug --priority 1
 ```
 
 ## Automated Setup Service
@@ -59,27 +59,27 @@ For first-time bootstrapping, use a separate service with a `setup` profile:
 
 ```yaml
 services:
-  ticketer:
-    image: veloper/ticketer
+  goard:
+    image: veloper/goard
     ports: ["8300:8300"]
     environment:
-      TICKETER_ADMIN_USERNAME: admin
-      TICKETER_ADMIN_PAT: pat_admin
+      GOARD_ADMIN_USERNAME: admin
+      GOARD_ADMIN_PAT: pat_admin
     volumes:
-      - ticketer-data:/data
+      - goard-data:/data
 
   setup:
-    image: veloper/ticketer
+    image: veloper/goard
     profiles: ["setup"]
     environment:
-      TICKETER_HOST: http://ticketer:8300
-      TICKETER_PAT: pat_admin
+      GOARD_HOST: http://goard:8300
+      GOARD_PAT: pat_admin
     depends_on:
-      ticketer:
+      goard:
         condition: service_started
     command: >
-      tktrctl projects create "Asteroid Game" ASTEROID-GAME &&
-      tktrctl issues create ASTEROID-GAME "Fix login" --type bug --priority 1
+      goardctl projects create "Asteroid Game" ASTEROID-GAME &&
+      goardctl issues create ASTEROID-GAME "Fix login" --type bug --priority 1
 ```
 
 ```bash
@@ -92,8 +92,8 @@ This creates the admin user (via the main service) and then seeds projects and i
 
 | Env var | Default | Description |
 |---------|---------|-------------|
-| `TICKETER_ADMIN_USERNAME` | — | Admin username **(required)** |
-| `TICKETER_ADMIN_PAT` | — | Admin PAT **(required)** |
-| `TICKETER_HOST` | `""` | Listen host |
-| `TICKETER_PORT` | `"8300"` | Listen port |
-| `TICKETER_DB_PATH` | `/data/ticketer.db` | SQLite database path |
+| `GOARD_ADMIN_USERNAME` | — | Admin username **(required)** |
+| `GOARD_ADMIN_PAT` | — | Admin PAT **(required)** |
+| `GOARD_HOST` | `""` | Listen host |
+| `GOARD_PORT` | `"8300"` | Listen port |
+| `GOARD_DB_PATH` | `/data/goard.db` | SQLite database path |

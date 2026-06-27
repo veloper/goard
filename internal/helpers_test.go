@@ -14,9 +14,9 @@ import (
 // ── Fixtures ──
 
 var testUsers = []SeedUser{
-	{Username: "alice", DisplayName: "Alice", PAT: "pat_alice"},
-	{Username: "bob", DisplayName: "Bob Builder", PAT: "pat_bob"},
-	{Username: "carol", DisplayName: "Carol Tester", PAT: "pat_carol"},
+	{Username: "alice", PAT: "pat_alice"},
+	{Username: "bob", PAT: "pat_bob"},
+	{Username: "carol", PAT: "pat_carol"},
 }
 
 // ── Store helpers ──
@@ -94,6 +94,8 @@ func serveHandler(h *Handler, req *http.Request) *httptest.ResponseRecorder {
 	mux.HandleFunc("POST /api/users", h.CreateUser)
 	mux.HandleFunc("PATCH /api/users/{id}", h.UpdateUser)
 	mux.HandleFunc("DELETE /api/users/{id}", h.DeleteUser)
+	mux.HandleFunc("GET /api/users/{id}/pat", h.GetUserPAT)
+	mux.HandleFunc("PUT /api/users/{id}/pat", h.SetUserPAT)
 	mux.HandleFunc("GET /api/projects", h.ListProjects)
 	mux.HandleFunc("POST /api/projects", h.CreateProject)
 	mux.HandleFunc("GET /api/projects/{id}", h.GetProject)
@@ -112,10 +114,18 @@ func serveHandler(h *Handler, req *http.Request) *httptest.ResponseRecorder {
 	return rr
 }
 
-// mustDecode decodes a JSON response body into v. Fatal on error.
+// mustDecode decodes a JSON envelope body into v, unwrapping the data field.
 func mustDecode(t *testing.T, body io.Reader, v any) {
 	t.Helper()
-	if err := json.NewDecoder(body).Decode(v); err != nil {
+	var env struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(body).Decode(&env); err != nil {
 		t.Fatalf("json.Decode: %v", err)
+	}
+	if env.Data != nil {
+		if err := json.Unmarshal(env.Data, v); err != nil {
+			t.Fatalf("json.Unmarshal: %v", err)
+		}
 	}
 }
