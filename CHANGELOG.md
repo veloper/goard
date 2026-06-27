@@ -47,3 +47,11 @@
 - **Docker auto-build.** `veloper/goard:main` and `veloper/goard:<sha>` on every push to main.
 - **Binary builds.** Archives + checksums attached to GitHub Releases.
 - **`scripts/release.sh`.** Semver-aware release helper with version guard.
+
+### 🏠 Project
+
+- Added `CONTRIBUTING.md`.
+- Removed `todo` state. Pipeline is now `backlog → in_progress → review → done | cancelled`.
+- Renamed `qa` state → `review`.
+- Replaced `epic` type → `improvement`.
+- Renamed `cmd/tktrctl/` → `cmd/goardctl/`.
