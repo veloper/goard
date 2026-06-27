@@ -1,64 +1,31 @@
 # Contributing
 
-## One-time setup
+## First time
 
-1. Fork the repo on GitHub.
-2. Clone your fork:
+- Fork the repo on GitHub.
+- Clone your fork, add the upstream remote:
 
 ```bash
-git clone https://github.com/<your-username>/goard.git
+git clone https://github.com/<you>/goard.git
 cd goard
-```
-
-3. Add the upstream remote:
-
-```bash
 git remote add upstream https://github.com/veloper/goard.git
-```
-
-## Development
-
-```bash
-# Run tests
-go test ./... -count=1 -timeout 60s
-
-# Build both binaries
-go build ./cmd/goard
-go build ./cmd/goardctl
-
-# Run the server locally
-GOARD_ADMIN_USERNAME=admin GOARD_ADMIN_PAT=pat_admin go run ./cmd/goard
-
-# Run the CLI against a running server
-GOARD_HOST=http://localhost:8300 GOARD_PAT=pat_admin go run ./cmd/goardctl projects list
 ```
 
 ## Making changes
 
-1. Create a branch from `main`:
+Create a branch, make your changes, commit, keep it updated:
 
 ```bash
 git checkout -b my-change
-```
-
-2. Make your changes. Keep them focused — one branch, one concern.
-
-3. Commit with a message that explains what and why:
-
-```bash
-git commit -m "package: short description"
-```
-
-The first word after the dash should be the package or area changed (`mcp`, `api`, `docs`, `README`, `cli`, `filter`, etc.).
-
-4. Keep your branch updated:
-
-```bash
+# make changes
+git commit -m "area: brief description of what changed"
 git fetch upstream
 git rebase upstream/main
 ```
 
-5. Run tests again:
+Try to keep one branch focused on one thing. Commit messages should be readable, not a specific format.
+
+Before you push, make sure tests still pass:
 
 ```bash
 go test ./... -count=1 -timeout 60s
@@ -66,14 +33,16 @@ go test ./... -count=1 -timeout 60s
 
 ## Pull request
 
-1. Push your branch:
+Push your branch and open a PR on GitHub against `veloper/goard main`. Say what changed and why. If it fixes an open issue, mention it.
+
+That's it. No CLA, no sign-off, no paperwork. If the change makes sense and the tests pass, it'll get merged.
+
+## Running locally
 
 ```bash
-git push origin my-change
+# Run the server
+GOARD_ADMIN_USERNAME=admin GOARD_ADMIN_PAT=pat_admin go run ./cmd/goard
+
+# Run the CLI against it
+GOARD_HOST=http://localhost:8300 GOARD_PAT=pat_admin go run ./cmd/goardctl projects list
 ```
-
-2. Open a pull request on GitHub against `veloper/goard main`.
-
-3. In the description, say what changed and why. If it fixes an issue, reference it.
-
-4. That's it. No CLA, no DCO, no sign-off. If the change is small and tested, it'll get merged.
