@@ -60,6 +60,7 @@ func main() {
 	mux.HandleFunc("POST /api/projects/{id}/issues", handler.CreateIssue)
 	mux.HandleFunc("GET /api/issues/{id}", handler.GetIssue)
 	mux.HandleFunc("PATCH /api/issues/{id}", handler.UpdateIssue)
+	mux.HandleFunc("PUT /api/issues/{id}/state", handler.UpdateIssueState)
 	mux.HandleFunc("DELETE /api/issues/{id}", handler.DeleteIssue)
 
 	mux.HandleFunc("GET /api/issues/{id}/comments", handler.ListComments)
@@ -69,19 +70,17 @@ func main() {
 
 	// Web UI — serve embedded files
 	webSub, _ := fs.Sub(webFS, "web")
-	fsrv := http.FileServer(http.FS(webSub))
-	mux.HandleFunc("GET /login", fsrv.ServeHTTP)
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path = "/index.html"
-		fsrv.ServeHTTP(w, r)
+	mux.HandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, webSub, "login.html")
+	})
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, webSub, "index.html")
 	})
 	mux.HandleFunc("GET /projects/{id}", func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path = "/project.html"
-		fsrv.ServeHTTP(w, r)
+		http.ServeFileFS(w, r, webSub, "project.html")
 	})
 	mux.HandleFunc("GET /issues/{id}", func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path = "/issue.html"
-		fsrv.ServeHTTP(w, r)
+		http.ServeFileFS(w, r, webSub, "issue.html")
 	})
 
 	// Middleware stack
