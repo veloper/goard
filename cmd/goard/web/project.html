@@ -53,7 +53,7 @@ a { color: #2563eb; text-decoration: none; }
 const PAT = localStorage.getItem('pat') || '';
 if (!PAT) { window.location.href = '/login'; }
 const projectId = location.pathname.split('/')[2];
-const STATES = ['backlog', 'todo', 'in_progress', 'qa', 'done', 'cancelled'];
+const STATES = ['backlog', 'in_progress', 'review', 'done', 'cancelled'];
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {

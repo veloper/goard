@@ -31,7 +31,7 @@ a { color: #2563eb; text-decoration: none; }
 const PAT = localStorage.getItem('pat') || '';
 if (!PAT) { window.location.href = '/login'; }
 const issueId = location.pathname.split('/')[2];
-const STATES = ['backlog', 'todo', 'in_progress', 'qa', 'done', 'cancelled'];
+const STATES = ['backlog', 'in_progress', 'review', 'done', 'cancelled'];
 const PRIORITIES = ['none', 'urgent', 'high', 'medium', 'low'];
 
 async function api(path, opts = {}) {
