@@ -1,51 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Roomy Ticketer</title>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goard — Project</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; padding: 24px; }
-h1 { margin-bottom: 16px; }
-a { color: #2563eb; text-decoration: none; }
-.board { display: flex; gap: 12px; overflow-x: auto; min-height: 60vh; }
-.column { background: #e8e8e8; border-radius: 8px; padding: 12px; min-width: 250px; flex: 1; }
-.column h3 { font-size: 13px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
-.card { background: #fff; border-radius: 6px; padding: 12px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.1); cursor: pointer; }
-.card:hover { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
-.card .seq { font-size: 11px; color: #999; }
-.card .title { font-weight: 500; margin: 4px 0; }
-.card .assignee { font-size: 12px; color: #666; }
-.priority-1 { border-left: 3px solid #ef4444; }
-.priority-2 { border-left: 3px solid #f97316; }
-.priority-3 { border-left: 3px solid #eab308; }
-.priority-4 { border-left: 3px solid #22c55e; }
-.btn { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-.btn:hover { background: #1d4ed8; }
-.btn-sm { padding: 4px 10px; font-size: 12px; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-.btn-sm:hover { background: #1d4ed8; }
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.4); align-items: center; justify-content: center; }
-.modal.open { display: flex; }
-.modal-content { background: #fff; padding: 24px; border-radius: 8px; width: 440px; max-height: 80vh; overflow-y: auto; }
-.form-row { margin-bottom: 8px; }
-.form-row input, .form-row textarea, .form-row select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-.back { margin-bottom: 16px; display: block; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f4f5f7;color:#1a1a2e;padding:24px;overflow-x:hidden}
+a{color:#2563eb;text-decoration:none}
+a:hover{text-decoration:underline}
+.page{max-width:1400px;margin:0 auto}
+.back{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:#666;margin-bottom:16px}
+.back:hover{color:#2563eb}
+.header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.header h1{font-size:22px;font-weight:700}
+.header small{font-size:13px;font-weight:400;color:#888}
+.board{display:flex;gap:12px;min-height:50vh;overflow-x:auto;padding-bottom:12px}
+.column{background:#eef0f4;border-radius:8px;padding:10px;min-width:240px;flex:1;display:flex;flex-direction:column}
+.column-header{font-size:12px;font-weight:600;text-transform:uppercase;color:#666;padding:4px 8px 10px;display:flex;justify-content:space-between}
+.column-header .count{background:#d0d3db;border-radius:10px;padding:0 8px;font-size:11px;line-height:18px}
+.column-empty{font-size:12px;color:#999;padding:16px 8px;text-align:center;font-style:italic}
+.card{background:#fff;border-radius:6px;padding:10px 12px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer;transition:box-shadow .15s;border-left:3px solid transparent}
+.card:hover{box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.card .seq{font-size:11px;color:#999}
+.card .title{font-weight:500;font-size:14px;margin:3px 0;color:#1a1a2e}
+.card .footer{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#888;margin-top:4px}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px}
+.badge-bug{background:#fef2f2;color:#b91c1c}
+.badge-feature{background:#eef2ff;color:#4338ca}
+.badge-chore{background:#f5f5f5;color:#666}
+.badge-improvement{background:#f0fdf4;color:#15803d}
+.prio-1{border-left-color:#ef4444}
+.prio-2{border-left-color:#f97316}
+.prio-3{border-left-color:#eab308}
+.prio-4{border-left-color:#22c55e}
+.error{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;color:#b91c1c;font-size:14px;display:none;margin-bottom:16px}
+.error.show{display:block}
+.loading{text-align:center;padding:48px 24px;color:#888}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #ddd;border-top-color:#2563eb;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-<a href="/" class="back">← Projects</a>
-<h1 id="project-name"></h1>
-<button class="btn" onclick="showCreate()">+ New Issue</button>
-<div class="board" id="board"></div>
-
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <h2>New Issue</h2>
-    <div class="form-row"><input id="ititle" placeholder="Title"></div>
-    <div class="form-row"><textarea id="ibody" placeholder="Description" rows="4"></textarea></div>
-    <div class="form-row">
-      <select id="iassignee"><option value="">Unassigned</option></select>
-    </div>
-    <button class="btn" onclick="createIssue()">Create</button>
-    <button class="btn" style="background:#999;margin-left:8px" onclick="closeModal()">Cancel</button>
+<div class="page">
+  <a href="/" class="back">← All Projects</a>
+  <div class="header">
+    <h1 id="project-name">Loading… <small id="project-id"></small></h1>
+  </div>
+  <div class="error" id="error"></div>
+  <div class="board" id="board">
+    <div class="loading"><span class="spinner"></span>Loading issues…</div>
   </div>
 </div>
 
@@ -54,6 +58,7 @@ const PAT = localStorage.getItem('pat') || '';
 if (!PAT) { window.location.href = '/login'; }
 const projectId = location.pathname.split('/')[2];
 const STATES = ['backlog', 'in_progress', 'review', 'done', 'cancelled'];
+const TYPE_BADGE = { bug: 'badge-bug', feature: 'badge-feature', chore: 'badge-chore', improvement: 'badge-improvement' };
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -61,61 +66,71 @@ async function api(path, opts = {}) {
     method: opts.method || 'GET',
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+  if (!res.ok) { const e = await res.json().catch(() => ({})).then(d => d.meta?.error || d.error || res.statusText); throw new Error(e); }
   if (res.status === 204) return null;
   const env = await res.json();
   if (env.meta && env.meta.error) throw new Error(env.meta.error);
   return env.data;
 }
 
-async function load() {
-  const [project, issues, users] = await Promise.all([
-    api(`/api/projects/${projectId}`),
-    api(`/api/projects/${projectId}/issues`),
-    api('/api/users'),
-  ]);
-  document.getElementById('project-name').textContent = project.name;
-
-  const userMap = {};
-  users.forEach(u => userMap[u.id] = u.username);
-
-  const sel = document.getElementById('iassignee');
-  sel.innerHTML = '<option value="">Unassigned</option>' + users.map(u =>
-    `<option value="${u.id}">${u.username}</option>`
-  ).join('');
-
-  const byState = {};
-  STATES.forEach(s => byState[s] = []);
-  issues.forEach(i => { if (byState[i.state]) byState[i.state].push(i); });
-
-  document.getElementById('board').innerHTML = STATES.map(s => `
-    <div class="column">
-      <h3>${s.replace('_', ' ')} (${byState[s].length})</h3>
-      ${byState[s].map(i => `
-        <div class="card priority-${i.priority}" onclick="location.href='/issues/${i.id}'">
-          <div class="seq">${i.sequence_id}</div>
-          <div class="title">${i.title}</div>
-          ${i.assignee ? `<div class="assignee">${userMap[i.assignee?.id] || ''}</div>` : ''}
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.classList.add('show');
 }
 
-function showCreate() { document.getElementById('modal').classList.add('open'); }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function esc(s) { const d = document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
 
-async function createIssue() {
-  const title = document.getElementById('ititle').value;
-  if (!title) return;
-  await api(`/api/projects/${projectId}/issues`, {
-    method: 'POST',
-    body: { title, description: document.getElementById('ibody').value, assignee: document.getElementById('iassignee').value }
-  });
-  document.getElementById('ititle').value = '';
-  document.getElementById('ibody').value = '';
-  closeModal();
-  wsConnect();
-load();
+function $(id) { return document.getElementById(id); }
+
+async function load() {
+  try {
+    const [project, issues, users] = await Promise.all([
+      api(`/api/projects/${projectId}`),
+      api(`/api/projects/${projectId}/issues`),
+      api('/api/users'),
+    ]);
+
+    const nameEl = $('project-name');
+    const idEl = $('project-id');
+    const board = $('board');
+    if (nameEl) nameEl.textContent = project.name;
+    if (idEl) idEl.textContent = '#' + project.id;
+    if (!board) { showError('Board element missing'); return; }
+
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.id] = u.username);
+
+    const byState = {};
+    STATES.forEach(s => byState[s] = []);
+    (issues || []).forEach(i => { if (byState[i.state]) byState[i.state].push(i); });
+
+    board.innerHTML = STATES.map(s => {
+      const items = byState[s];
+      return `
+        <div class="column">
+          <div class="column-header">
+            <span>${s.replace(/_/g, ' ')}</span>
+            <span class="count">${items.length}</span>
+          </div>
+          ${items.length === 0 ? '<div class="column-empty">No issues</div>' : items.map(i => `
+            <div class="card prio-${i.priority}" onclick="location.href='/issues/${i.id}'">
+              <div class="seq">${i.slug}</div>
+              <div class="title">${esc(i.title)}</div>
+              <div class="footer">
+                <span class="badge ${TYPE_BADGE[i.type] || ''}">${i.type}</span>
+                <span>${i.assignee ? esc(userMap[i.assignee.id] || '') : ''}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    showError('Failed to load: ' + e.message);
+    const board = $('board');
+    if (board) board.innerHTML = '<div class="loading">Failed to load project.</div>';
+  }
 }
 
 load();
@@ -124,19 +139,13 @@ function wsConnect() {
   const pat = document.querySelector('meta[name="default-pat"]')?.content || '';
   if (!pat) return;
   const ws = new WebSocket('ws://' + location.host + '/api/ws?pat=' + pat);
-  ws.onopen = () => {};
   ws.onclose = () => { setTimeout(wsConnect, 3000); };
   ws.onerror = () => { ws.close(); };
   ws.onmessage = (msg) => {
-    try {
-      const ev = JSON.parse(msg.data);
-      if (ev.type.startsWith('project_') || ev.type.startsWith('issue_') || ev.type.startsWith('comment_')) {
-        load();
-      }
-    } catch(e) {}
+    try { const ev = JSON.parse(msg.data); if (ev.type.startsWith('project_') || ev.type.startsWith('issue_')) load(); } catch(e) {}
   };
 }
-
+wsConnect();
 </script>
 </body>
 </html>
