@@ -46,7 +46,7 @@ func (s *Store) ListProjects(page, perPage int, orderBy string, filterClause str
 	if err != nil {
 		return nil, err
 	}
-	var out []Project
+	out := make([]Project, 0)
 	for rows.Next() {
 		var p Project
 		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.CreatedByUserID, &p.CreatedAt, &p.UpdatedAt); err != nil {

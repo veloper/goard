@@ -32,7 +32,7 @@ func (s *Store) ListUsers(page, perPage int, orderBy string, filterClause string
 		return nil, err
 	}
 	defer rows.Close()
-	var out []User
+	out := make([]User, 0)
 	for rows.Next() {
 		var u User
 		if err := rows.Scan(&u.ID, &u.Username, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {

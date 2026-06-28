@@ -56,8 +56,8 @@ async function load() {
   const userMap = {};
   users.forEach(u => userMap[u.id] = u);
 
-  const authorName = issue.assignee ? (userMap[issue.assignee]?.display_name || '') : '';
-  const creatorName = userMap[issue.created_by]?.display_name || '';
+  const assigneeName = issue.assignee ? issue.assignee.username : '';
+  const creatorName = issue.created_by?.username || '';
 
   document.getElementById('issue').innerHTML = `
     <div style="font-size:13px;color:#999">${issue.sequence_id}</div>
@@ -65,14 +65,14 @@ async function load() {
     <div class="meta">
       <span>State: ${issue.state.replace('_',' ')}</span>
       <span>Priority: ${PRIORITIES[issue.priority]}</span>
-      ${issue.assignee ? `<span>Assignee: ${authorName}</span>` : ''}
+      ${issue.assignee ? `<span>Assignee: ${assigneeName}</span>` : ''}
       <span>Created by: ${creatorName}</span>
     </div>
     ${issue.description ? `<div class="desc">${issue.description}</div>` : ''}
 
     <div class="controls">
       <select id="state-sel">${STATES.map(s => `<option value="${s}" ${s === issue.state ? 'selected' : ''}>${s.replace('_',' ')}</option>`).join('')}</select>
-      <select id="assignee-sel"><option value="">Unassigned</option>${users.map(u => `<option value="${u.id}" ${u.id === issue.assignee ? 'selected' : ''}>${u.display_name}</option>`).join('')}</select>
+      <select id="assignee-sel"><option value="">Unassigned</option>${users.map(u => `<option value="${u.id}" ${u.id === (issue.assignee?.id || 0) ? 'selected' : ''}>${u.username}</option>`).join('')}</select>
       <button class="btn-sm" onclick="update()">Update</button>
     </div>
 
@@ -81,7 +81,7 @@ async function load() {
     <h3>Comments (${comments.length})</h3>
     ${comments.map(c => `
       <div class="comment">
-        <div><span class="author">${userMap[c.author]?.display_name || ''}</span><span class="time">${c.created_at}</span></div>
+        <div><span class="author">${c.author?.username || ''}</span><span class="time">${c.created_at}</span></div>
         <div class="body">${c.body}</div>
       </div>
     `).join('')}

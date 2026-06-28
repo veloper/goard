@@ -66,7 +66,7 @@ func (s *Store) loadIssueRefs(projectID int64) []IssueRef {
 		return nil
 	}
 	defer rows.Close()
-	var out []IssueRef
+	out := make([]IssueRef, 0)
 	for rows.Next() {
 		var r IssueRef
 		var assignee sql.NullInt64

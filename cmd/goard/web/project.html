@@ -76,11 +76,11 @@ async function load() {
   document.getElementById('project-name').textContent = project.name;
 
   const userMap = {};
-  users.forEach(u => userMap[u.id] = u.display_name);
+  users.forEach(u => userMap[u.id] = u.username);
 
   const sel = document.getElementById('iassignee');
   sel.innerHTML = '<option value="">Unassigned</option>' + users.map(u =>
-    `<option value="${u.id}">${u.display_name}</option>`
+    `<option value="${u.id}">${u.username}</option>`
   ).join('');
 
   const byState = {};
@@ -94,7 +94,7 @@ async function load() {
         <div class="card priority-${i.priority}" onclick="location.href='/issues/${i.id}'">
           <div class="seq">${i.sequence_id}</div>
           <div class="title">${i.title}</div>
-          ${i.assignee ? `<div class="assignee">${userMap[i.assignee] || ''}</div>` : ''}
+          ${i.assignee ? `<div class="assignee">${userMap[i.assignee?.id] || ''}</div>` : ''}
         </div>
       `).join('')}
     </div>

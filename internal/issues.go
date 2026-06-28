@@ -136,7 +136,7 @@ func (s *Store) ListIssues(projectID int64, f IssueFilter) ([]Issue, int, error)
 		return nil, 0, fmt.Errorf("query: %w", err)
 	}
 
-	var out []Issue
+	out := make([]Issue, 0)
 	for rows.Next() {
 		var i Issue
 		var assignee, parentID sql.NullInt64

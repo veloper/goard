@@ -58,7 +58,7 @@ func (s *Store) ListComments(issueID int64, page, perPage int, orderBy string, f
 	if err != nil {
 		return nil, err
 	}
-	var out []Comment
+	out := make([]Comment, 0)
 	for rows.Next() {
 		var c Comment
 		if err := rows.Scan(&c.ID, &c.IssueID, &c.Body, &c.AuthorUserID, &c.CreatedByUserID, &c.CreatedAt, &c.UpdatedAt); err != nil {
