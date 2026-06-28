@@ -1,7 +1,34 @@
 # Changelog
 
 
-## v0.3.0 (unreleased)
+## v0.4.0 (2026-06-28)
+
+### ✨ New features
+
+- **Web UI redesign.** All three pages (projects list, project board, issue detail) restyled with a cleaner layout: grid cards on the projects page, colored pills/badges for state/type/priority/assignee on issues, type badges and per-column counts on the board.
+- **Avatar initials.** Comments now show user avatar circles with the first letter of the username.
+- **Formatted dates.** Dates display as localized strings (e.g. "Jun 28, 2026, 14:30") instead of raw ISO timestamps.
+- **Error handling.** All pages catch API errors and display them inline instead of failing silently.
+- **Loading states.** Spinner + message shown while data loads; empty-state messages when no projects/issues exist.
+- **XSS escaping.** `esc()` helper sanitizes all user content in the web UI.
+- **WebSocket event filtering.** Pages only reload on relevant events (e.g. issue page ignores project updates).
+
+### 🐛 Bug fixes
+
+- **Empty list responses.** Empty arrays now render as proper empty-state messages instead of blank pages (`null` → `[]`).
+
+---
+
+## v0.3.0 (2026-06-28)
+
+### ✨ New features
+
+- **State/type/priority validation.** All endpoints validate against whitelists.
+
+### 🐛 Bug fixes
+
+- **Web UI routes.** Fixed login 404 and root redirect issues.
+- **Web UI states.** State display fixed to show human-readable labels consistently.
 
 ### 🏠 Project
 
