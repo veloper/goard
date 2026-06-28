@@ -16,8 +16,17 @@ func (s *Store) CreateIssue(projectID int64, title, description, typ, state stri
 	if state == "" {
 		state = "backlog"
 	}
+	if !validState(state) {
+		return nil, fmt.Errorf("invalid state: %s", state)
+	}
 	if typ == "" {
 		typ = "feature"
+	}
+	if !validType(typ) {
+		return nil, fmt.Errorf("invalid type: %s", typ)
+	}
+	if !validPriority(priority) {
+		return nil, fmt.Errorf("invalid priority: %d", priority)
 	}
 	iss := &Issue{
 		ProjectID: projectID, Slug: "_",
@@ -229,15 +238,24 @@ func (s *Store) UpdateIssue(id int64, title, description, typ, state string, ass
 		i.Description = description
 	}
 	if typ != "" {
+		if !validType(typ) {
+			return nil, fmt.Errorf("invalid type: %s", typ)
+		}
 		i.Type = typ
 	}
 	if state != "" {
+		if !validState(state) {
+			return nil, fmt.Errorf("invalid state: %s", state)
+		}
 		i.State = state
 	}
 	if assigneeUserID != nil {
 		i.AssigneeUserID = *assigneeUserID
 	}
 	if priority != nil {
+		if !validPriority(*priority) {
+			return nil, fmt.Errorf("invalid priority: %d", *priority)
+		}
 		i.Priority = *priority
 	}
 	if parentID != nil {
@@ -255,6 +273,33 @@ func (s *Store) UpdateIssue(id int64, title, description, typ, state string, ass
 	i.Assignee = s.loadUserRef(i.AssigneeUserID)
 	i.CreatedBy = s.loadUserRef(i.CreatedByUserID)
 	return i, nil
+}
+
+func validState(s string) bool {
+	for _, v := range ValidStates {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func validType(s string) bool {
+	for _, v := range ValidTypes {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func validPriority(p int) bool {
+	for _, v := range ValidPriorityLevels {
+		if v == p {
+			return true
+		}
+	}
+	return false
 }
 
 // DeleteIssue deletes an issue and its comments by ID.
